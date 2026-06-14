@@ -1,8 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { PageContainer, ImageFrame, StatusBadge } from "../components/ui-chrome";
-import { useCampaignContent } from "../lib/campaign-content";
+import { getCampaignContent } from "../lib/api/campaign.functions";
 
 export const Route = createFileRoute("/personagens/$slug")({
+  loader: () => getCampaignContent(),
   head: () => ({
     meta: [
       { title: "Personagem — Tenebre" },
@@ -24,7 +25,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 function CharacterDetail() {
   const { slug } = Route.useParams();
-  const { characters } = useCampaignContent();
+  const { characters } = Route.useLoaderData();
   const c = characters.find((character) => character.slug === slug);
 
   if (!c) {

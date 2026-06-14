@@ -1,8 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { PageContainer, SectionTitle, ChronicleCard, ImageFrame } from "../components/ui-chrome";
-import { useCampaignContent } from "../lib/campaign-content";
+import { getCampaignContent } from "../lib/api/campaign.functions";
 
 export const Route = createFileRoute("/personagens")({
+  loader: () => getCampaignContent(),
   head: () => ({
     meta: [
       { title: "Personagens — Tenebre" },
@@ -15,7 +16,7 @@ export const Route = createFileRoute("/personagens")({
 });
 
 function CharactersPage() {
-  const { characters } = useCampaignContent();
+  const { characters } = Route.useLoaderData();
 
   return (
     <PageContainer>

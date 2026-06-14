@@ -1,8 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { PageContainer, SectionTitle, ChronicleCard, StatusBadge } from "../components/ui-chrome";
-import { useCampaignContent } from "../lib/campaign-content";
+import { getCampaignContent } from "../lib/api/campaign.functions";
 
 export const Route = createFileRoute("/arquivo")({
+  loader: () => getCampaignContent(),
   head: () => ({
     meta: [
       { title: "Arquivo — Tenebre" },
@@ -15,7 +16,7 @@ export const Route = createFileRoute("/arquivo")({
 });
 
 function ArchivePage() {
-  const { archive } = useCampaignContent();
+  const { archive } = Route.useLoaderData();
 
   return (
     <PageContainer>

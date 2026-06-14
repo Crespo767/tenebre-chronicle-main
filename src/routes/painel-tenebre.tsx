@@ -1,4 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useRouter } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import {
   AlertTriangle,
   Download,
@@ -16,19 +17,18 @@ import { PageContainer, SectionTitle, ChronicleCard, StatusBadge } from "../comp
 import {
   cloneContent,
   defaultCampaignContent,
-  readCampaignContent,
-  resetCampaignContent,
   uniqueSlug,
-  useCampaignContent,
-  writeCampaignContent,
   type CampaignContent,
 } from "../lib/campaign-content";
 import {
+  getAdminStatus,
+  getCampaignContent,
   loginAdminUser,
   logoutAdminUser,
   registerAdminUser,
-  useAdminSession,
-} from "../lib/admin-auth";
+  saveCampaignContent,
+  uploadCharacterImage,
+} from "../lib/api/campaign.functions";
 
 type SectionKey = keyof CampaignContent;
 type DraftItem = Record<string, unknown>;
@@ -46,6 +46,10 @@ const sections: {
 ];
 
 export const Route = createFileRoute("/painel-tenebre")({
+  loader: async () => ({
+    admin: await getAdminStatus(),
+    content: await getCampaignContent(),
+  }),
   head: () => ({
     meta: [
       { title: "Painel Tenebre" },
@@ -307,12 +311,16 @@ function FormSection({
 function ImagePathField({
   value,
   onChange,
+  onUpload,
 }: {
   value: unknown;
   onChange: (value: string) => void;
+  onUpload?: (file: File) => Promise<string>;
 }) {
   const path = String(value ?? "").trim();
   const [previewFailed, setPreviewFailed] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadMessage, setUploadMessage] = useState("");
   const isValidPath =
     !path || path.startsWith("/images/characters/") || path.startsWith("https://");
 
@@ -322,12 +330,48 @@ function ImagePathField({
 
   return (
     <div className="grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,1fr)_150px]">
-      <Field
-        label="Imagem"
-        value={value}
-        onChange={onChange}
-        help="Use /images/characters/nome-do-personagem.webp ou uma URL https."
-      />
+      <div>
+        <Field
+          label="Imagem"
+          value={value}
+          onChange={onChange}
+          help="Use /images/characters/nome-do-personagem.webp, uma URL https ou envie um arquivo."
+        />
+        {onUpload && (
+          <div className="mt-3 flex flex-wrap items-center gap-3">
+            <label className="inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded border border-border px-3 text-sm text-foreground transition-colors hover:border-[var(--gold)]/40">
+              <Upload className="h-4 w-4" />
+              {uploading ? "Enviando..." : "Enviar imagem"}
+              <input
+                type="file"
+                accept="image/png,image/jpeg,image/webp,image/gif"
+                className="sr-only"
+                disabled={uploading}
+                onChange={async (event) => {
+                  const file = event.currentTarget.files?.[0];
+                  event.currentTarget.value = "";
+                  if (!file) return;
+
+                  setUploading(true);
+                  setUploadMessage("");
+                  try {
+                    const url = await onUpload(file);
+                    onChange(url);
+                    setUploadMessage("Imagem enviada.");
+                  } catch (error) {
+                    setUploadMessage(
+                      error instanceof Error ? error.message : "Falha ao enviar imagem.",
+                    );
+                  } finally {
+                    setUploading(false);
+                  }
+                }}
+              />
+            </label>
+            {uploadMessage && <p className="text-sm text-muted-foreground">{uploadMessage}</p>}
+          </div>
+        )}
+      </div>
       <div className="overflow-hidden rounded border border-border/70 bg-background/55">
         {path && !previewFailed ? (
           <img
@@ -389,8 +433,15 @@ function IconButton({
   );
 }
 
-function AuthPanel({ onAuthenticated }: { onAuthenticated: () => void }) {
-  const { canRegister, refresh } = useAdminSession();
+function AuthPanel({
+  canRegister,
+  onAuthenticated,
+}: {
+  canRegister: boolean;
+  onAuthenticated: (username: string) => void;
+}) {
+  const loginFn = useServerFn(loginAdminUser);
+  const registerFn = useServerFn(registerAdminUser);
   const [mode, setMode] = useState<"login" | "register">("login");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -406,10 +457,11 @@ function AuthPanel({ onAuthenticated }: { onAuthenticated: () => void }) {
     setBusy(true);
     setMessage("");
 
+    const credentials = { username, password };
     const result =
       mode === "register"
-        ? await registerAdminUser(username, password)
-        : await loginAdminUser(username, password);
+        ? await registerFn({ data: credentials })
+        : await loginFn({ data: credentials });
 
     setBusy(false);
 
@@ -418,8 +470,7 @@ function AuthPanel({ onAuthenticated }: { onAuthenticated: () => void }) {
       return;
     }
 
-    refresh();
-    onAuthenticated();
+    onAuthenticated(result.username);
   }
 
   return (
@@ -473,10 +524,12 @@ function SectionForm({
   section,
   draft,
   setField,
+  uploadImage,
 }: {
   section: SectionKey;
   draft: DraftItem;
   setField: (field: string, value: unknown) => void;
+  uploadImage?: (file: File) => Promise<string>;
 }) {
   if (section === "sessions") {
     return (
@@ -605,7 +658,11 @@ function SectionForm({
           title="Imagem"
           description="Use arquivos em public/images/characters para manter o deploy simples."
         >
-          <ImagePathField value={draft.image} onChange={(value) => setField("image", value)} />
+          <ImagePathField
+            value={draft.image}
+            onChange={(value) => setField("image", value)}
+            onUpload={uploadImage}
+          />
         </FormSection>
 
         <FormSection
@@ -785,12 +842,18 @@ function SectionForm({
   );
 }
 
-function BackupPanel() {
+function BackupPanel({
+  content,
+  onReplace,
+}: {
+  content: CampaignContent;
+  onReplace: (content: CampaignContent, message: string) => Promise<void>;
+}) {
   const [importText, setImportText] = useState("");
   const [message, setMessage] = useState("");
 
   function exportJson() {
-    const blob = new Blob([JSON.stringify(readCampaignContent(), null, 2)], {
+    const blob = new Blob([JSON.stringify(content, null, 2)], {
       type: "application/json",
     });
     const url = URL.createObjectURL(blob);
@@ -801,7 +864,7 @@ function BackupPanel() {
     URL.revokeObjectURL(url);
   }
 
-  function importJson() {
+  async function importJson() {
     try {
       const parsed = JSON.parse(importText) as CampaignContent;
       if (
@@ -813,17 +876,19 @@ function BackupPanel() {
       ) {
         throw new Error("Formato incompleto.");
       }
-      writeCampaignContent(parsed);
+      await onReplace(parsed, "Conteúdo importado.");
       setImportText("");
       setMessage("Conteúdo importado.");
-    } catch {
-      setMessage("JSON inválido ou fora do formato esperado.");
+    } catch (error) {
+      setMessage(
+        error instanceof Error ? error.message : "JSON inválido ou fora do formato esperado.",
+      );
     }
   }
 
-  function resetAll() {
+  async function resetAll() {
     if (!window.confirm("Restaurar todo o conteúdo original do projeto?")) return;
-    resetCampaignContent();
+    await onReplace(cloneContent(defaultCampaignContent), "Conteúdo original restaurado.");
     setMessage("Conteúdo original restaurado.");
   }
 
@@ -866,8 +931,19 @@ function BackupPanel() {
   );
 }
 
-function Editor({ username, onLogout }: { username: string; onLogout: () => void }) {
-  const content = useCampaignContent();
+function Editor({
+  initialContent,
+  username,
+  onLogout,
+}: {
+  initialContent: CampaignContent;
+  username: string;
+  onLogout: () => void;
+}) {
+  const router = useRouter();
+  const saveContentFn = useServerFn(saveCampaignContent);
+  const uploadImageFn = useServerFn(uploadCharacterImage);
+  const [content, setContent] = useState<CampaignContent>(() => cloneContent(initialContent));
   const [section, setSection] = useState<SectionKey>("sessions");
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [draft, setDraft] = useState<DraftItem>(
@@ -886,6 +962,10 @@ function Editor({ username, onLogout }: { username: string; onLogout: () => void
     [activeItem, draft],
   );
   const hasSelection = Boolean(activeItem);
+
+  useEffect(() => {
+    setContent(cloneContent(initialContent));
+  }, [initialContent]);
 
   useEffect(() => {
     const currentItems = getCollection(content, section);
@@ -923,33 +1003,59 @@ function Editor({ username, onLogout }: { username: string; onLogout: () => void
     setSavedMessage("");
   }
 
-  function addItem() {
+  async function persistContent(nextContent: CampaignContent, message: string) {
+    const result = await saveContentFn({ data: nextContent });
+    setContent(result.content);
+    setSavedMessage(message);
+    await router.invalidate();
+  }
+
+  async function uploadImage(file: File) {
+    const base64 = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const value = String(reader.result ?? "");
+        resolve(value.includes(",") ? (value.split(",")[1] ?? "") : value);
+      };
+      reader.onerror = () => reject(new Error("Não foi possível ler a imagem."));
+      reader.readAsDataURL(file);
+    });
+    const result = await uploadImageFn({
+      data: {
+        fileName: file.name,
+        mimeType: file.type as "image/png" | "image/jpeg" | "image/webp" | "image/gif",
+        base64,
+      },
+    });
+
+    if (!result.ok) throw new Error(result.message);
+    return result.url;
+  }
+
+  async function addItem() {
     if (!confirmDiscardChanges()) return;
     const next = cloneContent(content) as unknown as Record<SectionKey, DraftItem[]>;
     next[section] = [createItem(section, content), ...next[section]];
-    writeCampaignContent(next as unknown as CampaignContent);
+    await persistContent(next as unknown as CampaignContent, "Novo registro criado.");
     setSelectedIndex(0);
-    setSavedMessage("Novo registro criado.");
   }
 
-  function saveItem() {
+  async function saveItem() {
     if (!hasSelection) return;
     const next = cloneContent(content) as unknown as Record<SectionKey, DraftItem[]>;
     next[section] = [...next[section]];
     next[section][selectedIndex] = draft;
-    writeCampaignContent(next as unknown as CampaignContent);
-    setSavedMessage("Alterações salvas.");
+    await persistContent(next as unknown as CampaignContent, "Alterações salvas.");
   }
 
-  function deleteItem() {
+  async function deleteItem() {
     if (!items[selectedIndex]) return;
     if (!window.confirm("Remover este registro?")) return;
 
     const next = cloneContent(content) as unknown as Record<SectionKey, DraftItem[]>;
     next[section] = next[section].filter((_, index) => index !== selectedIndex);
-    writeCampaignContent(next as unknown as CampaignContent);
+    await persistContent(next as unknown as CampaignContent, "Registro removido.");
     setSelectedIndex(0);
-    setSavedMessage("Registro removido.");
   }
 
   function renderActionButtons() {
@@ -1056,7 +1162,12 @@ function Editor({ username, onLogout }: { username: string; onLogout: () => void
               Nenhum registro nesta seção. Use “Novo” para começar.
             </div>
           ) : (
-            <SectionForm section={section} draft={draft} setField={setField} />
+            <SectionForm
+              section={section}
+              draft={draft}
+              setField={setField}
+              uploadImage={uploadImage}
+            />
           )}
 
           {savedMessage && <p className="mt-4 text-sm text-[var(--gold)]">{savedMessage}</p>}
@@ -1071,24 +1182,41 @@ function Editor({ username, onLogout }: { username: string; onLogout: () => void
         </ChronicleCard>
       </div>
 
-      <BackupPanel />
+      <BackupPanel content={content} onReplace={persistContent} />
     </PageContainer>
   );
 }
 
 function AdminPage() {
-  const { username, refresh } = useAdminSession();
+  const router = useRouter();
+  const logoutFn = useServerFn(logoutAdminUser);
+  const { admin, content } = Route.useLoaderData();
+  const [username, setUsername] = useState<string | null>(admin.username);
+
+  useEffect(() => {
+    setUsername(admin.username);
+  }, [admin.username]);
 
   if (!username) {
-    return <AuthPanel onAuthenticated={refresh} />;
+    return (
+      <AuthPanel
+        canRegister={admin.canRegister}
+        onAuthenticated={(nextUsername) => {
+          setUsername(nextUsername);
+          void router.invalidate();
+        }}
+      />
+    );
   }
 
   return (
     <Editor
+      initialContent={content}
       username={username}
-      onLogout={() => {
-        logoutAdminUser();
-        refresh();
+      onLogout={async () => {
+        await logoutFn();
+        setUsername(null);
+        await router.invalidate();
       }}
     />
   );

@@ -61,7 +61,8 @@ export const sessions: Session[] = [
       "Lysandra é olhada com mais suspeita pelos devotos.",
     ],
     hooks: ["O que sussurra para Inya?", "Por que as cartas pararam de mentir?"],
-    masterNotes: "Deixe a tensão crescer sem violência. Esta sessão é sobre fé, medo e o que se faz com uma criança estranha.",
+    masterNotes:
+      "Deixe a tensão crescer sem violência. Esta sessão é sobre fé, medo e o que se faz com uma criança estranha.",
   },
   {
     slug: "sessao-03-o-primeiro-sinal-de-corrupcao",
@@ -86,6 +87,7 @@ export const sessions: Session[] = [
       "Quem rompeu a capela — de dentro para fora?",
       "O sonho de Padre Halbrecht era aviso ou convocação?",
     ],
-    masterNotes: "A corrupção entrou na crônica. A partir daqui, nada que pareça simples é simples.",
+    masterNotes:
+      "A corrupção entrou na crônica. A partir daqui, nada que pareça simples é simples.",
   },
 ];

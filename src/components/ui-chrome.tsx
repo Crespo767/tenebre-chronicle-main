@@ -1,7 +1,15 @@
 import type { ReactNode } from "react";
 
-export function PageContainer({ children, className = "" }: { children: ReactNode; className?: string }) {
-  return <div className={`mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14 ${className}`}>{children}</div>;
+export function PageContainer({
+  children,
+  className = "",
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <div className={`mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14 ${className}`}>{children}</div>
+  );
 }
 
 export function SectionTitle({
@@ -37,12 +45,16 @@ export function ChronicleCard({
   as?: "div" | "article" | "section";
   className?: string;
 }) {
-  return (
-    <As className={`chronicle-card chronicle-card-hover p-5 ${className}`}>{children}</As>
-  );
+  return <As className={`chronicle-card chronicle-card-hover p-5 ${className}`}>{children}</As>;
 }
 
-export function StatusBadge({ children, tone = "neutral" }: { children: ReactNode; tone?: "neutral" | "danger" | "ok" | "warn" }) {
+export function StatusBadge({
+  children,
+  tone = "neutral",
+}: {
+  children: ReactNode;
+  tone?: "neutral" | "danger" | "ok" | "warn";
+}) {
   const tones: Record<string, string> = {
     neutral: "border-border text-muted-foreground",
     danger: "border-[var(--blood)]/60 text-[oklch(0.75_0.12_25)]",
@@ -50,7 +62,9 @@ export function StatusBadge({ children, tone = "neutral" }: { children: ReactNod
     warn: "border-[var(--gold)]/60 text-[var(--gold)]",
   };
   return (
-    <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs tracking-wide ${tones[tone]}`}>
+    <span
+      className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs tracking-wide ${tones[tone]}`}
+    >
       {children}
     </span>
   );
@@ -84,7 +98,10 @@ export function ImageFrame({
           (e.currentTarget as HTMLImageElement).style.display = "none";
         }}
       />
-      <div aria-hidden className="absolute inset-0 bg-gradient-to-t from-background/80 via-background/10 to-transparent" />
+      <div
+        aria-hidden
+        className="absolute inset-0 bg-gradient-to-t from-background/80 via-background/10 to-transparent"
+      />
     </div>
   );
 }

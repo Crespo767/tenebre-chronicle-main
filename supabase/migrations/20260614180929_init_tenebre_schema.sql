@@ -11,6 +11,7 @@ $$;
 create or replace function public.set_updated_at()
 returns trigger
 language plpgsql
+set search_path = pg_catalog
 as $$
 begin
   new.updated_at = now();
@@ -100,11 +101,27 @@ create table if not exists public.campaign_master_notes (
   unique (title, note_date)
 );
 
+create table if not exists public.admin_users (
+  username text primary key,
+  username_normalized text not null unique,
+  password_hash text not null,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.admin_sessions (
+  token_hash text primary key,
+  username text not null references public.admin_users (username) on delete cascade,
+  expires_at timestamptz not null,
+  created_at timestamptz not null default now()
+);
+
 create index if not exists campaign_sessions_order_idx on public.campaign_sessions (number, order_index);
 create index if not exists campaign_characters_order_idx on public.campaign_characters (order_index, name);
 create index if not exists campaign_npcs_order_idx on public.campaign_npcs (order_index, name);
 create index if not exists campaign_archive_items_order_idx on public.campaign_archive_items (order_index, title);
 create index if not exists campaign_master_notes_order_idx on public.campaign_master_notes (order_index, title);
+create index if not exists admin_sessions_username_idx on public.admin_sessions (username);
+create index if not exists admin_sessions_expires_at_idx on public.admin_sessions (expires_at);
 
 drop trigger if exists set_campaign_sessions_updated_at on public.campaign_sessions;
 create trigger set_campaign_sessions_updated_at
@@ -136,9 +153,16 @@ alter table public.campaign_characters enable row level security;
 alter table public.campaign_npcs enable row level security;
 alter table public.campaign_archive_items enable row level security;
 alter table public.campaign_master_notes enable row level security;
+alter table public.admin_users enable row level security;
+alter table public.admin_sessions enable row level security;
 
 grant usage on schema public to anon, authenticated, service_role;
 grant usage on type public.archive_item_type to anon, authenticated, service_role;
+revoke all on table public.campaign_sessions from anon, authenticated;
+revoke all on table public.campaign_characters from anon, authenticated;
+revoke all on table public.campaign_npcs from anon, authenticated;
+revoke all on table public.campaign_archive_items from anon, authenticated;
+revoke all on table public.campaign_master_notes from anon, authenticated;
 grant select on table public.campaign_sessions to anon, authenticated;
 grant select on table public.campaign_characters to anon, authenticated;
 grant select on table public.campaign_npcs to anon, authenticated;
@@ -149,6 +173,10 @@ grant all on table public.campaign_characters to service_role;
 grant all on table public.campaign_npcs to service_role;
 grant all on table public.campaign_archive_items to service_role;
 grant all on table public.campaign_master_notes to service_role;
+revoke all on table public.admin_users from anon, authenticated;
+revoke all on table public.admin_sessions from anon, authenticated;
+grant all on table public.admin_users to service_role;
+grant all on table public.admin_sessions to service_role;
 
 drop policy if exists "Public read campaign sessions" on public.campaign_sessions;
 create policy "Public read campaign sessions"
@@ -211,6 +239,20 @@ using (true);
 drop policy if exists "Service role manages campaign master notes" on public.campaign_master_notes;
 create policy "Service role manages campaign master notes"
 on public.campaign_master_notes for all
+to service_role
+using (true)
+with check (true);
+
+drop policy if exists "Service role manages admin users" on public.admin_users;
+create policy "Service role manages admin users"
+on public.admin_users for all
+to service_role
+using (true)
+with check (true);
+
+drop policy if exists "Service role manages admin sessions" on public.admin_sessions;
+create policy "Service role manages admin sessions"
+on public.admin_sessions for all
 to service_role
 using (true)
 with check (true);
@@ -558,6 +600,21 @@ on conflict (title, note_date) do update set
   body = excluded.body,
   order_index = excluded.order_index;
 
+update storage.buckets
+set id = 'character-images',
+    name = 'character-images'
+where id = 'character-image'
+  and not exists (
+    select 1 from storage.buckets existing where existing.id = 'character-images'
+  );
+
+update storage.objects
+set bucket_id = 'character-images'
+where bucket_id = 'character-image'
+  and exists (
+    select 1 from storage.buckets existing where existing.id = 'character-images'
+  );
+
 insert into storage.buckets (
   id,
   name,
@@ -577,10 +634,6 @@ on conflict (id) do update set
   allowed_mime_types = excluded.allowed_mime_types;
 
 drop policy if exists "Public read character images" on storage.objects;
-create policy "Public read character images"
-on storage.objects for select
-to anon, authenticated
-using (bucket_id = 'character-images');
 
 drop policy if exists "Service role manages character images" on storage.objects;
 create policy "Service role manages character images"
@@ -588,3 +641,18 @@ on storage.objects for all
 to service_role
 using (bucket_id = 'character-images')
 with check (bucket_id = 'character-images');
+
+do $$
+begin
+  if exists (
+    select 1
+    from pg_proc p
+    join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public'
+      and p.proname = 'rls_auto_enable'
+      and pg_get_function_identity_arguments(p.oid) = ''
+  ) then
+    revoke execute on function public.rls_auto_enable() from public, anon, authenticated;
+  end if;
+end
+$$;

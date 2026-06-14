@@ -1,7 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import type {} from "@tanstack/react-start";
-import { sessions } from "../data/sessions";
-import { characters } from "../data/characters";
+import { getCampaignContent } from "../lib/api/campaign.functions";
 
 const BASE_URL = "";
 
@@ -9,6 +8,7 @@ export const Route = createFileRoute("/sitemap.xml")({
   server: {
     handlers: {
       GET: async () => {
+        const { sessions, characters } = await getCampaignContent();
         const entries: { path: string; changefreq?: string; priority?: string }[] = [
           { path: "/", changefreq: "weekly", priority: "1.0" },
           { path: "/sessoes", changefreq: "weekly" },

@@ -1,8 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { PageContainer, SectionTitle, ChronicleCard, StatusBadge } from "../components/ui-chrome";
-import { useCampaignContent } from "../lib/campaign-content";
+import { getCampaignContent } from "../lib/api/campaign.functions";
 
 export const Route = createFileRoute("/npcs")({
+  loader: () => getCampaignContent(),
   head: () => ({
     meta: [
       { title: "NPCs — Tenebre" },
@@ -22,7 +23,7 @@ function tone(status: string) {
 }
 
 function NpcsPage() {
-  const { npcs } = useCampaignContent();
+  const { npcs } = Route.useLoaderData();
 
   return (
     <PageContainer>

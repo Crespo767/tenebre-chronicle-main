@@ -1,8 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { PageContainer, SectionTitle, ChronicleCard } from "../components/ui-chrome";
-import { useCampaignContent } from "../lib/campaign-content";
+import { getCampaignContent } from "../lib/api/campaign.functions";
 
 export const Route = createFileRoute("/sessoes")({
+  loader: () => getCampaignContent(),
   head: () => ({
     meta: [
       { title: "Sessões — Tenebre" },
@@ -15,7 +16,7 @@ export const Route = createFileRoute("/sessoes")({
 });
 
 function SessionsPage() {
-  const { sessions } = useCampaignContent();
+  const { sessions } = Route.useLoaderData();
 
   return (
     <PageContainer>

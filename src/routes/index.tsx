@@ -1,8 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { PageContainer, SectionTitle, ChronicleCard } from "../components/ui-chrome";
-import { useCampaignContent } from "../lib/campaign-content";
+import { getCampaignContent } from "../lib/api/campaign.functions";
 
 export const Route = createFileRoute("/")({
+  loader: () => getCampaignContent(),
   head: () => ({
     meta: [
       { title: "Tenebre — Uma campanha de Symbaroum" },
@@ -30,7 +31,7 @@ const quickLinks = [
 ] as const;
 
 function HomePage() {
-  const { masterNotes } = useCampaignContent();
+  const { masterNotes } = Route.useLoaderData();
 
   return (
     <>

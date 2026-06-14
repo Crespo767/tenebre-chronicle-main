@@ -1,8 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { PageContainer } from "../components/ui-chrome";
-import { useCampaignContent } from "../lib/campaign-content";
+import { getCampaignContent } from "../lib/api/campaign.functions";
 
 export const Route = createFileRoute("/sessoes/$slug")({
+  loader: () => getCampaignContent(),
   head: () => ({
     meta: [
       { title: "Registro de sessão — Tenebre" },
@@ -29,7 +30,7 @@ function Block({ title, items }: { title: string; items: string[] }) {
 
 function SessionDetail() {
   const { slug } = Route.useParams();
-  const { sessions } = useCampaignContent();
+  const { sessions } = Route.useLoaderData();
   const session = sessions.find((s) => s.slug === slug);
 
   if (!session) {
