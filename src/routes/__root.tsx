@@ -81,7 +81,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       {
         name: "description",
         content:
-          "Wiki viva da campanha Tenebre: sessões, personagens, NPCs, rumores, arquivo e notas de mestre de uma crônica de dark fantasy inspirada em Symbaroum.",
+          "Wiki viva da campanha Tenebre: sessões, personagens, NPCs, arquivo e notas de mestre de uma crônica de dark fantasy inspirada em Symbaroum.",
       },
       { name: "author", content: "Tenebre" },
       { name: "theme-color", content: "#1a1612" },

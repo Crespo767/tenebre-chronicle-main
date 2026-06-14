@@ -9,7 +9,7 @@ export const Route = createFileRoute("/")({
       {
         name: "description",
         content:
-          "A wiki viva da campanha Tenebre. Sessões, personagens, NPCs, rumores, arquivo e notas do mestre.",
+          "A wiki viva da campanha Tenebre. Sessões, personagens, NPCs, arquivo e notas do mestre.",
       },
       { property: "og:title", content: "Tenebre — Uma campanha de Symbaroum" },
       {
@@ -25,7 +25,6 @@ const quickLinks = [
   { to: "/sessoes", title: "Sessões", desc: "Registros das noites de mesa." },
   { to: "/personagens", title: "Personagens", desc: "Quem ainda caminha com a caravana." },
   { to: "/npcs", title: "NPCs", desc: "Rostos cruzados pelo caminho." },
-  { to: "/rumores", title: "Rumores", desc: "Sussurros e pistas colhidos pelo caminho." },
   { to: "/arquivo", title: "Arquivo", desc: "Cartas, mapas e handouts da campanha." },
   { to: "/notas", title: "Notas do Mestre", desc: "Avisos públicos da crônica." },
 ] as const;
@@ -66,9 +65,9 @@ function HomePage() {
             escuro.”
           </blockquote>
           <p className="mx-auto mt-8 max-w-2xl text-sm leading-relaxed text-muted-foreground sm:text-base">
-            Esta wiki reúne registros da campanha, personagens, sessões, rumores, documentos e notas
-            importantes da mesa. Nem tudo aqui é verdade. Nem tudo aqui é seguro. E algumas coisas
-            talvez nunca devessem ter sido escritas.
+            Esta wiki reúne registros da campanha, personagens, sessões, documentos e notas
+            importantes da mesa. Nem tudo aqui é seguro. E algumas coisas talvez nunca devessem ter
+            sido escritas.
           </p>
           <div className="mt-10 flex flex-wrap justify-center gap-3">
             <Link
@@ -93,7 +92,7 @@ function HomePage() {
           title="Acesso rápido"
           subtitle="Os fios principais da campanha, organizados."
         />
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
           {quickLinks.map((q) => (
             <Link key={q.to} to={q.to} className="block focus:outline-none">
               <ChronicleCard className="h-full">

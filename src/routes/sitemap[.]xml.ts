@@ -14,7 +14,6 @@ export const Route = createFileRoute("/sitemap.xml")({
           { path: "/sessoes", changefreq: "weekly" },
           { path: "/personagens", changefreq: "weekly" },
           { path: "/npcs", changefreq: "weekly" },
-          { path: "/rumores", changefreq: "weekly" },
           { path: "/arquivo", changefreq: "monthly" },
           { path: "/notas", changefreq: "weekly" },
           ...sessions.map((s) => ({ path: `/sessoes/${s.slug}` })),

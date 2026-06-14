@@ -11,7 +11,6 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as SessoesRouteImport } from './routes/sessoes'
-import { Route as RumoresRouteImport } from './routes/rumores'
 import { Route as PersonagensRouteImport } from './routes/personagens'
 import { Route as NpcsRouteImport } from './routes/npcs'
 import { Route as NotasRouteImport } from './routes/notas'
@@ -28,11 +27,6 @@ const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
 const SessoesRoute = SessoesRouteImport.update({
   id: '/sessoes',
   path: '/sessoes',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const RumoresRoute = RumoresRouteImport.update({
-  id: '/rumores',
-  path: '/rumores',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PersonagensRoute = PersonagensRouteImport.update({
@@ -77,7 +71,6 @@ export interface FileRoutesByFullPath {
   '/notas': typeof NotasRoute
   '/npcs': typeof NpcsRoute
   '/personagens': typeof PersonagensRouteWithChildren
-  '/rumores': typeof RumoresRoute
   '/sessoes': typeof SessoesRouteWithChildren
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/personagens/$slug': typeof PersonagensSlugRoute
@@ -89,7 +82,6 @@ export interface FileRoutesByTo {
   '/notas': typeof NotasRoute
   '/npcs': typeof NpcsRoute
   '/personagens': typeof PersonagensRouteWithChildren
-  '/rumores': typeof RumoresRoute
   '/sessoes': typeof SessoesRouteWithChildren
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/personagens/$slug': typeof PersonagensSlugRoute
@@ -102,7 +94,6 @@ export interface FileRoutesById {
   '/notas': typeof NotasRoute
   '/npcs': typeof NpcsRoute
   '/personagens': typeof PersonagensRouteWithChildren
-  '/rumores': typeof RumoresRoute
   '/sessoes': typeof SessoesRouteWithChildren
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/personagens/$slug': typeof PersonagensSlugRoute
@@ -116,7 +107,6 @@ export interface FileRouteTypes {
     | '/notas'
     | '/npcs'
     | '/personagens'
-    | '/rumores'
     | '/sessoes'
     | '/sitemap.xml'
     | '/personagens/$slug'
@@ -128,7 +118,6 @@ export interface FileRouteTypes {
     | '/notas'
     | '/npcs'
     | '/personagens'
-    | '/rumores'
     | '/sessoes'
     | '/sitemap.xml'
     | '/personagens/$slug'
@@ -140,7 +129,6 @@ export interface FileRouteTypes {
     | '/notas'
     | '/npcs'
     | '/personagens'
-    | '/rumores'
     | '/sessoes'
     | '/sitemap.xml'
     | '/personagens/$slug'
@@ -153,7 +141,6 @@ export interface RootRouteChildren {
   NotasRoute: typeof NotasRoute
   NpcsRoute: typeof NpcsRoute
   PersonagensRoute: typeof PersonagensRouteWithChildren
-  RumoresRoute: typeof RumoresRoute
   SessoesRoute: typeof SessoesRouteWithChildren
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
 }
@@ -172,13 +159,6 @@ declare module '@tanstack/react-router' {
       path: '/sessoes'
       fullPath: '/sessoes'
       preLoaderRoute: typeof SessoesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/rumores': {
-      id: '/rumores'
-      path: '/rumores'
-      fullPath: '/rumores'
-      preLoaderRoute: typeof RumoresRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/personagens': {
@@ -262,7 +242,6 @@ const rootRouteChildren: RootRouteChildren = {
   NotasRoute: NotasRoute,
   NpcsRoute: NpcsRoute,
   PersonagensRoute: PersonagensRouteWithChildren,
-  RumoresRoute: RumoresRoute,
   SessoesRoute: SessoesRouteWithChildren,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
 }
