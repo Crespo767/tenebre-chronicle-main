@@ -8,7 +8,7 @@ export const Route = createFileRoute("/npcs")({
       { title: "NPCs — Tenebre" },
       { name: "description", content: "Rostos cruzados na caravana e nas estradas." },
       { property: "og:title", content: "NPCs — Tenebre" },
-      { property: "og:description", content: "Personagens importantes do mundo de Tenebre." },
+      { property: "og:description", content: "Aliados, suspeitos e inimigos da crônica." },
     ],
   }),
   component: NpcsPage,
@@ -24,7 +24,11 @@ function tone(status: string) {
 function NpcsPage() {
   return (
     <PageContainer>
-      <SectionTitle eyebrow="Personagens do Mundo" title="NPCs" subtitle="Aliados, suspeitos, inimigos — às vezes os três." />
+      <SectionTitle
+        eyebrow="Coadjuvantes"
+        title="NPCs"
+        subtitle="Aliados, suspeitos, inimigos — às vezes os três."
+      />
       <ul className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
         {npcs.map((n) => (
           <li key={n.slug}>
@@ -35,8 +39,14 @@ function NpcsPage() {
               </div>
               <p className="text-sm text-[var(--gold)]/80">{n.role}</p>
               <dl className="mt-3 space-y-1 text-xs text-muted-foreground">
-                <div><dt className="inline text-foreground/80">Local: </dt><dd className="inline">{n.location}</dd></div>
-                <div><dt className="inline text-foreground/80">Relação: </dt><dd className="inline">{n.relation}</dd></div>
+                <div>
+                  <dt className="inline text-foreground/80">Local: </dt>
+                  <dd className="inline">{n.location}</dd>
+                </div>
+                <div>
+                  <dt className="inline text-foreground/80">Relação: </dt>
+                  <dd className="inline">{n.relation}</dd>
+                </div>
               </dl>
               <p className="mt-3 text-sm leading-relaxed text-foreground/85">{n.summary}</p>
             </ChronicleCard>

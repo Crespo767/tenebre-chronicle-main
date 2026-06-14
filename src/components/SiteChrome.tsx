@@ -5,9 +5,7 @@ const nav = [
   { to: "/", label: "Início" },
   { to: "/sessoes", label: "Sessões" },
   { to: "/personagens", label: "Personagens" },
-  { to: "/mundo", label: "Mundo" },
   { to: "/npcs", label: "NPCs" },
-  { to: "/faccoes", label: "Facções" },
   { to: "/rumores", label: "Rumores" },
   { to: "/arquivo", label: "Arquivo" },
   { to: "/notas", label: "Notas" },
@@ -21,7 +19,10 @@ export function Header() {
     <header className="sticky top-0 z-40 border-b border-border/70 bg-background/85 backdrop-blur-sm">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
         <Link to="/" className="group flex items-center gap-3 min-w-0">
-          <span aria-hidden className="inline-block h-7 w-7 shrink-0 rounded-full border border-[var(--gold)]/60 bg-[radial-gradient(circle,_var(--gold)_0%,_transparent_65%)] opacity-80" />
+          <span
+            aria-hidden
+            className="inline-block h-7 w-7 shrink-0 rounded-full border border-[var(--gold)]/60 bg-[radial-gradient(circle,_var(--gold)_0%,_transparent_65%)] opacity-80"
+          />
           <span className="font-display text-xl tracking-[0.18em] text-[var(--gold)] truncate">
             TENEBRE
           </span>
@@ -55,7 +56,15 @@ export function Header() {
           className="inline-flex h-10 w-10 items-center justify-center rounded border border-border text-foreground lg:hidden"
         >
           <span className="sr-only">Menu</span>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            aria-hidden
+          >
             {open ? <path d="M6 6l12 12M6 18L18 6" /> : <path d="M3 6h18M3 12h18M3 18h18" />}
           </svg>
         </button>

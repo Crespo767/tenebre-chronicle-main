@@ -15,14 +15,10 @@ import { Route as RumoresRouteImport } from './routes/rumores'
 import { Route as PersonagensRouteImport } from './routes/personagens'
 import { Route as NpcsRouteImport } from './routes/npcs'
 import { Route as NotasRouteImport } from './routes/notas'
-import { Route as MundoRouteImport } from './routes/mundo'
-import { Route as FaccoesRouteImport } from './routes/faccoes'
 import { Route as ArquivoRouteImport } from './routes/arquivo'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SessoesSlugRouteImport } from './routes/sessoes.$slug'
 import { Route as PersonagensSlugRouteImport } from './routes/personagens.$slug'
-import { Route as MundoSlugRouteImport } from './routes/mundo.$slug'
-import { Route as FaccoesSlugRouteImport } from './routes/faccoes.$slug'
 
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
@@ -54,16 +50,6 @@ const NotasRoute = NotasRouteImport.update({
   path: '/notas',
   getParentRoute: () => rootRouteImport,
 } as any)
-const MundoRoute = MundoRouteImport.update({
-  id: '/mundo',
-  path: '/mundo',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const FaccoesRoute = FaccoesRouteImport.update({
-  id: '/faccoes',
-  path: '/faccoes',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ArquivoRoute = ArquivoRouteImport.update({
   id: '/arquivo',
   path: '/arquivo',
@@ -84,46 +70,28 @@ const PersonagensSlugRoute = PersonagensSlugRouteImport.update({
   path: '/$slug',
   getParentRoute: () => PersonagensRoute,
 } as any)
-const MundoSlugRoute = MundoSlugRouteImport.update({
-  id: '/$slug',
-  path: '/$slug',
-  getParentRoute: () => MundoRoute,
-} as any)
-const FaccoesSlugRoute = FaccoesSlugRouteImport.update({
-  id: '/$slug',
-  path: '/$slug',
-  getParentRoute: () => FaccoesRoute,
-} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/arquivo': typeof ArquivoRoute
-  '/faccoes': typeof FaccoesRouteWithChildren
-  '/mundo': typeof MundoRouteWithChildren
   '/notas': typeof NotasRoute
   '/npcs': typeof NpcsRoute
   '/personagens': typeof PersonagensRouteWithChildren
   '/rumores': typeof RumoresRoute
   '/sessoes': typeof SessoesRouteWithChildren
   '/sitemap.xml': typeof SitemapDotxmlRoute
-  '/faccoes/$slug': typeof FaccoesSlugRoute
-  '/mundo/$slug': typeof MundoSlugRoute
   '/personagens/$slug': typeof PersonagensSlugRoute
   '/sessoes/$slug': typeof SessoesSlugRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/arquivo': typeof ArquivoRoute
-  '/faccoes': typeof FaccoesRouteWithChildren
-  '/mundo': typeof MundoRouteWithChildren
   '/notas': typeof NotasRoute
   '/npcs': typeof NpcsRoute
   '/personagens': typeof PersonagensRouteWithChildren
   '/rumores': typeof RumoresRoute
   '/sessoes': typeof SessoesRouteWithChildren
   '/sitemap.xml': typeof SitemapDotxmlRoute
-  '/faccoes/$slug': typeof FaccoesSlugRoute
-  '/mundo/$slug': typeof MundoSlugRoute
   '/personagens/$slug': typeof PersonagensSlugRoute
   '/sessoes/$slug': typeof SessoesSlugRoute
 }
@@ -131,16 +99,12 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/arquivo': typeof ArquivoRoute
-  '/faccoes': typeof FaccoesRouteWithChildren
-  '/mundo': typeof MundoRouteWithChildren
   '/notas': typeof NotasRoute
   '/npcs': typeof NpcsRoute
   '/personagens': typeof PersonagensRouteWithChildren
   '/rumores': typeof RumoresRoute
   '/sessoes': typeof SessoesRouteWithChildren
   '/sitemap.xml': typeof SitemapDotxmlRoute
-  '/faccoes/$slug': typeof FaccoesSlugRoute
-  '/mundo/$slug': typeof MundoSlugRoute
   '/personagens/$slug': typeof PersonagensSlugRoute
   '/sessoes/$slug': typeof SessoesSlugRoute
 }
@@ -149,48 +113,36 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/arquivo'
-    | '/faccoes'
-    | '/mundo'
     | '/notas'
     | '/npcs'
     | '/personagens'
     | '/rumores'
     | '/sessoes'
     | '/sitemap.xml'
-    | '/faccoes/$slug'
-    | '/mundo/$slug'
     | '/personagens/$slug'
     | '/sessoes/$slug'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/arquivo'
-    | '/faccoes'
-    | '/mundo'
     | '/notas'
     | '/npcs'
     | '/personagens'
     | '/rumores'
     | '/sessoes'
     | '/sitemap.xml'
-    | '/faccoes/$slug'
-    | '/mundo/$slug'
     | '/personagens/$slug'
     | '/sessoes/$slug'
   id:
     | '__root__'
     | '/'
     | '/arquivo'
-    | '/faccoes'
-    | '/mundo'
     | '/notas'
     | '/npcs'
     | '/personagens'
     | '/rumores'
     | '/sessoes'
     | '/sitemap.xml'
-    | '/faccoes/$slug'
-    | '/mundo/$slug'
     | '/personagens/$slug'
     | '/sessoes/$slug'
   fileRoutesById: FileRoutesById
@@ -198,8 +150,6 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ArquivoRoute: typeof ArquivoRoute
-  FaccoesRoute: typeof FaccoesRouteWithChildren
-  MundoRoute: typeof MundoRouteWithChildren
   NotasRoute: typeof NotasRoute
   NpcsRoute: typeof NpcsRoute
   PersonagensRoute: typeof PersonagensRouteWithChildren
@@ -252,20 +202,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof NotasRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/mundo': {
-      id: '/mundo'
-      path: '/mundo'
-      fullPath: '/mundo'
-      preLoaderRoute: typeof MundoRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/faccoes': {
-      id: '/faccoes'
-      path: '/faccoes'
-      fullPath: '/faccoes'
-      preLoaderRoute: typeof FaccoesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/arquivo': {
       id: '/arquivo'
       path: '/arquivo'
@@ -294,43 +230,8 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PersonagensSlugRouteImport
       parentRoute: typeof PersonagensRoute
     }
-    '/mundo/$slug': {
-      id: '/mundo/$slug'
-      path: '/$slug'
-      fullPath: '/mundo/$slug'
-      preLoaderRoute: typeof MundoSlugRouteImport
-      parentRoute: typeof MundoRoute
-    }
-    '/faccoes/$slug': {
-      id: '/faccoes/$slug'
-      path: '/$slug'
-      fullPath: '/faccoes/$slug'
-      preLoaderRoute: typeof FaccoesSlugRouteImport
-      parentRoute: typeof FaccoesRoute
-    }
   }
 }
-
-interface FaccoesRouteChildren {
-  FaccoesSlugRoute: typeof FaccoesSlugRoute
-}
-
-const FaccoesRouteChildren: FaccoesRouteChildren = {
-  FaccoesSlugRoute: FaccoesSlugRoute,
-}
-
-const FaccoesRouteWithChildren =
-  FaccoesRoute._addFileChildren(FaccoesRouteChildren)
-
-interface MundoRouteChildren {
-  MundoSlugRoute: typeof MundoSlugRoute
-}
-
-const MundoRouteChildren: MundoRouteChildren = {
-  MundoSlugRoute: MundoSlugRoute,
-}
-
-const MundoRouteWithChildren = MundoRoute._addFileChildren(MundoRouteChildren)
 
 interface PersonagensRouteChildren {
   PersonagensSlugRoute: typeof PersonagensSlugRoute
@@ -358,8 +259,6 @@ const SessoesRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ArquivoRoute: ArquivoRoute,
-  FaccoesRoute: FaccoesRouteWithChildren,
-  MundoRoute: MundoRouteWithChildren,
   NotasRoute: NotasRoute,
   NpcsRoute: NpcsRoute,
   PersonagensRoute: PersonagensRouteWithChildren,

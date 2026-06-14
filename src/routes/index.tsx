@@ -6,9 +6,16 @@ export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       { title: "Tenebre — Uma campanha de Symbaroum" },
-      { name: "description", content: "A wiki viva da campanha Tenebre. Sessões, personagens, NPCs, facções, lore e notas do mestre." },
+      {
+        name: "description",
+        content:
+          "A wiki viva da campanha Tenebre. Sessões, personagens, NPCs, rumores, arquivo e notas do mestre.",
+      },
       { property: "og:title", content: "Tenebre — Uma campanha de Symbaroum" },
-      { property: "og:description", content: "Alberetor ficou para trás em cinzas. Ambria se ergue como promessa. Ao norte, Davokar observa." },
+      {
+        property: "og:description",
+        content: "Registros, personagens e notas da campanha Tenebre.",
+      },
     ],
   }),
   component: HomePage,
@@ -17,9 +24,9 @@ export const Route = createFileRoute("/")({
 const quickLinks = [
   { to: "/sessoes", title: "Sessões", desc: "Registros das noites de mesa." },
   { to: "/personagens", title: "Personagens", desc: "Quem ainda caminha com a caravana." },
-  { to: "/mundo", title: "Mundo", desc: "Alberetor, Ambria, Davokar e o que dorme entre eles." },
   { to: "/npcs", title: "NPCs", desc: "Rostos cruzados pelo caminho." },
-  { to: "/faccoes", title: "Facções", desc: "Casas, ordens e pactos." },
+  { to: "/rumores", title: "Rumores", desc: "Sussurros e pistas colhidos pelo caminho." },
+  { to: "/arquivo", title: "Arquivo", desc: "Cartas, mapas e handouts da campanha." },
   { to: "/notas", title: "Notas do Mestre", desc: "Avisos públicos da crônica." },
 ] as const;
 
@@ -38,7 +45,10 @@ function HomePage() {
               "radial-gradient(ellipse at 30% 20%, oklch(0.30 0.04 140 / 0.55), transparent 60%), radial-gradient(ellipse at 80% 80%, oklch(0.25 0.06 55 / 0.5), transparent 65%), linear-gradient(180deg, oklch(0.12 0.012 95) 0%, oklch(0.18 0.012 95) 100%)",
           }}
         />
-        <div aria-hidden className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_50%_-10%,_oklch(0.6_0.10_80_/_0.18),_transparent_55%)]" />
+        <div
+          aria-hidden
+          className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_50%_-10%,_oklch(0.6_0.10_80_/_0.18),_transparent_55%)]"
+        />
 
         <div className="mx-auto max-w-4xl px-4 py-20 text-center sm:px-6 sm:py-28 md:py-36">
           <p className="text-xs uppercase tracking-[0.4em] text-[var(--gold)]/80">
@@ -52,12 +62,13 @@ function HomePage() {
           </p>
           <div className="gold-rule mx-auto mt-8 w-48" />
           <blockquote className="mx-auto mt-8 max-w-2xl font-display text-xl text-foreground/90 sm:text-2xl">
-            “Alberetor ficou para trás em cinzas. Ambria se ergue como promessa. Ao norte, Davokar observa.”
+            “Cada sessão deixa marcas. Algumas viram registro. Outras continuam esperando no
+            escuro.”
           </blockquote>
           <p className="mx-auto mt-8 max-w-2xl text-sm leading-relaxed text-muted-foreground sm:text-base">
-            Esta wiki reúne os registros da campanha, personagens, sessões, lugares descobertos,
-            facções, rumores e notas importantes da mesa. Nem tudo aqui é verdade. Nem tudo aqui é
-            seguro. E algumas coisas talvez nunca devessem ter sido escritas.
+            Esta wiki reúne registros da campanha, personagens, sessões, rumores, documentos e notas
+            importantes da mesa. Nem tudo aqui é verdade. Nem tudo aqui é seguro. E algumas coisas
+            talvez nunca devessem ter sido escritas.
           </p>
           <div className="mt-10 flex flex-wrap justify-center gap-3">
             <Link
@@ -67,37 +78,49 @@ function HomePage() {
               Ler as sessões
             </Link>
             <Link
-              to="/mundo"
+              to="/personagens"
               className="inline-flex items-center justify-center rounded border border-border px-5 py-2.5 text-sm tracking-wide text-foreground transition-colors hover:border-[var(--gold)]/40"
             >
-              Conhecer o mundo
+              Ver personagens
             </Link>
           </div>
         </div>
       </section>
 
       <PageContainer>
-        <SectionTitle eyebrow="A Crônica" title="Acesso rápido" subtitle="Os fios principais da campanha, organizados." />
+        <SectionTitle
+          eyebrow="A Crônica"
+          title="Acesso rápido"
+          subtitle="Os fios principais da campanha, organizados."
+        />
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {quickLinks.map((q) => (
             <Link key={q.to} to={q.to} className="block focus:outline-none">
               <ChronicleCard className="h-full">
                 <h3 className="font-display text-2xl text-foreground">{q.title}</h3>
                 <p className="mt-2 text-sm text-muted-foreground">{q.desc}</p>
-                <p className="mt-4 text-xs uppercase tracking-[0.25em] text-[var(--gold)]/80">Acessar →</p>
+                <p className="mt-4 text-xs uppercase tracking-[0.25em] text-[var(--gold)]/80">
+                  Acessar →
+                </p>
               </ChronicleCard>
             </Link>
           ))}
         </div>
 
         <div className="mt-16">
-          <SectionTitle eyebrow="Avisos da Mesa" title="Notas do Mestre" subtitle="Avisos curtos para os jogadores." />
+          <SectionTitle
+            eyebrow="Avisos da Mesa"
+            title="Notas do Mestre"
+            subtitle="Avisos curtos para os jogadores."
+          />
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             {masterNotes.slice(0, 4).map((n) => (
               <ChronicleCard key={n.title} as="article">
                 <div className="flex items-baseline justify-between gap-3">
                   <h3 className="font-display text-xl text-[var(--gold)]">{n.title}</h3>
-                  <span className="shrink-0 text-xs uppercase tracking-widest text-muted-foreground">{n.date}</span>
+                  <span className="shrink-0 text-xs uppercase tracking-widest text-muted-foreground">
+                    {n.date}
+                  </span>
                 </div>
                 <p className="mt-2 text-sm leading-relaxed text-foreground/85">{n.body}</p>
               </ChronicleCard>
