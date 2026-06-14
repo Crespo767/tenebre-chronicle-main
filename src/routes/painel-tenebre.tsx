@@ -1,5 +1,15 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { LogOut, Plus, Save, Trash2, Upload, RotateCcw, Download } from "lucide-react";
+import {
+  AlertTriangle,
+  Download,
+  Image,
+  LogOut,
+  Plus,
+  RotateCcw,
+  Save,
+  Trash2,
+  Upload,
+} from "lucide-react";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 
 import { PageContainer, SectionTitle, ChronicleCard, StatusBadge } from "../components/ui-chrome";
@@ -272,16 +282,94 @@ function SelectField({
   );
 }
 
+function FormSection({
+  title,
+  description,
+  children,
+}: {
+  title: string;
+  description?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="border-t border-border/70 pt-5 first:border-t-0 first:pt-0">
+      <div className="mb-4">
+        <h3 className="font-display text-2xl text-foreground">{title}</h3>
+        {description && (
+          <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{description}</p>
+        )}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function ImagePathField({
+  value,
+  onChange,
+}: {
+  value: unknown;
+  onChange: (value: string) => void;
+}) {
+  const path = String(value ?? "").trim();
+  const [previewFailed, setPreviewFailed] = useState(false);
+  const isValidPath =
+    !path || path.startsWith("/images/characters/") || path.startsWith("https://");
+
+  useEffect(() => {
+    setPreviewFailed(false);
+  }, [path]);
+
+  return (
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,1fr)_150px]">
+      <Field
+        label="Imagem"
+        value={value}
+        onChange={onChange}
+        help="Use /images/characters/nome-do-personagem.webp ou uma URL https."
+      />
+      <div className="overflow-hidden rounded border border-border/70 bg-background/55">
+        {path && !previewFailed ? (
+          <img
+            src={path}
+            alt="Prévia da imagem do personagem"
+            className="aspect-[3/4] w-full object-cover"
+            onError={(event) => {
+              event.currentTarget.style.display = "none";
+              setPreviewFailed(true);
+            }}
+          />
+        ) : (
+          <div className="flex aspect-[3/4] flex-col items-center justify-center gap-2 px-3 text-center text-xs text-muted-foreground">
+            <Image className="h-5 w-5 text-[var(--gold)]/70" />
+            {path ? "Imagem não encontrada" : "Sem imagem"}
+          </div>
+        )}
+      </div>
+      {(!isValidPath || previewFailed) && (
+        <p className="flex items-start gap-2 text-sm text-[oklch(0.75_0.12_25)] md:col-span-2">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+          {previewFailed
+            ? "Não foi possível carregar a prévia. Verifique se o arquivo existe no caminho informado."
+            : "Prefira imagens dentro de /images/characters/ para manter o site simples e portável."}
+        </p>
+      )}
+    </div>
+  );
+}
+
 function IconButton({
   children,
   onClick,
   variant = "default",
   type = "button",
+  disabled = false,
 }: {
   children: React.ReactNode;
   onClick?: () => void;
   variant?: "default" | "danger" | "quiet";
   type?: "button" | "submit";
+  disabled?: boolean;
 }) {
   const styles = {
     default: "border-[var(--gold)]/50 text-[var(--gold)] hover:bg-[var(--gold)]/10",
@@ -293,7 +381,8 @@ function IconButton({
     <button
       type={type}
       onClick={onClick}
-      className={`inline-flex h-10 items-center justify-center gap-2 rounded border px-3 text-sm transition-colors ${styles[variant]}`}
+      disabled={disabled}
+      className={`inline-flex h-10 items-center justify-center gap-2 rounded border px-3 text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-45 ${styles[variant]}`}
     >
       {children}
     </button>
@@ -344,8 +433,8 @@ function AuthPanel({ onAuthenticated }: { onAuthenticated: () => void }) {
         <div className="gold-rule mx-auto mt-5 w-32" />
       </div>
       <ChronicleCard className="mx-auto mt-7 w-full max-w-[24rem] p-4 sm:p-5">
-        <div className="mb-4 flex justify-end">
-          {canRegister && (
+        {canRegister && (
+          <div className="mb-4 flex justify-end">
             <button
               type="button"
               onClick={() => setMode(mode === "login" ? "register" : "login")}
@@ -353,8 +442,8 @@ function AuthPanel({ onAuthenticated }: { onAuthenticated: () => void }) {
             >
               {mode === "login" ? "Registrar novo usuário" : "Voltar ao login"}
             </button>
-          )}
-        </div>
+          </div>
+        )}
 
         <form onSubmit={submit} className="space-y-3.5">
           <Field label="Login" value={username} onChange={setUsername} />
@@ -391,235 +480,307 @@ function SectionForm({
 }) {
   if (section === "sessions") {
     return (
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <Field
-          label="Slug da URL"
-          value={draft.slug}
-          onChange={(value) => setField("slug", value)}
-        />
-        <NumberField
-          label="Número"
-          value={draft.number}
-          onChange={(value) => setField("number", value)}
-        />
-        <Field label="Título" value={draft.title} onChange={(value) => setField("title", value)} />
-        <Field label="Data" value={draft.date} onChange={(value) => setField("date", value)} />
-        <div className="lg:col-span-2">
-          <LinesField
-            label="Presentes"
-            value={draft.present}
-            onChange={(value) => setField("present", value)}
-          />
-        </div>
-        <div className="lg:col-span-2">
-          <TextAreaField
-            label="Resumo"
-            value={draft.summary}
-            onChange={(value) => setField("summary", value)}
-          />
-        </div>
-        <LinesField
-          label="Acontecimentos"
-          value={draft.events}
-          onChange={(value) => setField("events", value)}
-        />
-        <LinesField
-          label="NPCs encontrados"
-          value={draft.npcs}
-          onChange={(value) => setField("npcs", value)}
-        />
-        <LinesField
-          label="Locais visitados"
-          value={draft.locations}
-          onChange={(value) => setField("locations", value)}
-        />
-        <LinesField
-          label="Consequências"
-          value={draft.consequences}
-          onChange={(value) => setField("consequences", value)}
-        />
-        <LinesField
-          label="Ganchos pendentes"
-          value={draft.hooks}
-          onChange={(value) => setField("hooks", value)}
-        />
-        <div className="lg:col-span-2">
-          <TextAreaField
-            label="Notas do Mestre"
-            value={draft.masterNotes}
-            onChange={(value) => setField("masterNotes", value)}
-          />
-        </div>
+      <div className="space-y-6">
+        <FormSection title="Identificação" description="Dados usados para listar e abrir a sessão.">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <NumberField
+              label="Número"
+              value={draft.number}
+              onChange={(value) => setField("number", value)}
+            />
+            <Field label="Data" value={draft.date} onChange={(value) => setField("date", value)} />
+            <Field
+              label="Título"
+              value={draft.title}
+              onChange={(value) => setField("title", value)}
+            />
+            <Field
+              label="Slug da URL"
+              value={draft.slug}
+              onChange={(value) => setField("slug", value)}
+            />
+          </div>
+        </FormSection>
+
+        <FormSection title="Registro" description="Resumo principal e participantes da noite.">
+          <div className="space-y-4">
+            <LinesField
+              label="Presentes"
+              value={draft.present}
+              onChange={(value) => setField("present", value)}
+            />
+            <TextAreaField
+              label="Resumo"
+              value={draft.summary}
+              onChange={(value) => setField("summary", value)}
+            />
+          </div>
+        </FormSection>
+
+        <FormSection
+          title="Acontecimentos"
+          description="Listas públicas exibidas na página da sessão."
+        >
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <LinesField
+              label="Acontecimentos"
+              value={draft.events}
+              onChange={(value) => setField("events", value)}
+            />
+            <LinesField
+              label="NPCs encontrados"
+              value={draft.npcs}
+              onChange={(value) => setField("npcs", value)}
+            />
+            <LinesField
+              label="Locais visitados"
+              value={draft.locations}
+              onChange={(value) => setField("locations", value)}
+            />
+            <LinesField
+              label="Consequências"
+              value={draft.consequences}
+              onChange={(value) => setField("consequences", value)}
+            />
+            <LinesField
+              label="Ganchos pendentes"
+              value={draft.hooks}
+              onChange={(value) => setField("hooks", value)}
+            />
+            <TextAreaField
+              label="Notas do Mestre"
+              value={draft.masterNotes}
+              onChange={(value) => setField("masterNotes", value)}
+              rows={4}
+            />
+          </div>
+        </FormSection>
       </div>
     );
   }
 
   if (section === "characters") {
     return (
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <Field
-          label="Slug da URL"
-          value={draft.slug}
-          onChange={(value) => setField("slug", value)}
-        />
-        <Field label="Nome" value={draft.name} onChange={(value) => setField("name", value)} />
-        <Field
-          label="Subtítulo"
-          value={draft.subtitle}
-          onChange={(value) => setField("subtitle", value)}
-        />
-        <Field
-          label="Jogador(a)"
-          value={draft.player}
-          onChange={(value) => setField("player", value)}
-        />
-        <Field label="Ocupação" value={draft.role} onChange={(value) => setField("role", value)} />
-        <Field label="Povo" value={draft.people} onChange={(value) => setField("people", value)} />
-        <Field
-          label="Status"
-          value={draft.status}
-          onChange={(value) => setField("status", value)}
-        />
-        <Field
-          label="Imagem"
-          value={draft.image}
-          onChange={(value) => setField("image", value)}
-          help="Caminho público, ex.: /images/characters/nome.webp"
-        />
-        <div className="lg:col-span-2">
-          <TextAreaField
-            label="Citação"
-            value={draft.quote}
-            onChange={(value) => setField("quote", value)}
-            rows={3}
-          />
-        </div>
-        <TextAreaField
-          label="Aparência"
-          value={draft.appearance}
-          onChange={(value) => setField("appearance", value)}
-        />
-        <TextAreaField
-          label="Objetivo pessoal"
-          value={draft.goal}
-          onChange={(value) => setField("goal", value)}
-        />
-        <TextAreaField
-          label="Histórico"
-          value={draft.history}
-          onChange={(value) => setField("history", value)}
-        />
-        <TextAreaField
-          label="Vínculos"
-          value={draft.bonds}
-          onChange={(value) => setField("bonds", value)}
-        />
-        <LinesField
-          label="Itens importantes"
-          value={draft.items}
-          onChange={(value) => setField("items", value)}
-        />
-        <TextAreaField
-          label="Notas de evolução"
-          value={draft.evolution}
-          onChange={(value) => setField("evolution", value)}
-        />
-        <div className="lg:col-span-2">
-          <TextAreaField
-            label="Relações com NPCs"
-            value={draft.relations}
-            onChange={(value) => setField("relations", value)}
-          />
-        </div>
+      <div className="space-y-6">
+        <FormSection
+          title="Identidade"
+          description="Informações que aparecem no card e no topo da ficha."
+        >
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <Field label="Nome" value={draft.name} onChange={(value) => setField("name", value)} />
+            <Field
+              label="Slug da URL"
+              value={draft.slug}
+              onChange={(value) => setField("slug", value)}
+            />
+            <Field
+              label="Subtítulo"
+              value={draft.subtitle}
+              onChange={(value) => setField("subtitle", value)}
+            />
+            <Field
+              label="Jogador(a)"
+              value={draft.player}
+              onChange={(value) => setField("player", value)}
+            />
+            <Field
+              label="Ocupação"
+              value={draft.role}
+              onChange={(value) => setField("role", value)}
+            />
+            <Field
+              label="Povo"
+              value={draft.people}
+              onChange={(value) => setField("people", value)}
+            />
+            <Field
+              label="Status"
+              value={draft.status}
+              onChange={(value) => setField("status", value)}
+            />
+          </div>
+        </FormSection>
+
+        <FormSection
+          title="Imagem"
+          description="Use arquivos em public/images/characters para manter o deploy simples."
+        >
+          <ImagePathField value={draft.image} onChange={(value) => setField("image", value)} />
+        </FormSection>
+
+        <FormSection
+          title="Texto público"
+          description="Conteúdo narrativo exibido na ficha do personagem."
+        >
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <div className="lg:col-span-2">
+              <TextAreaField
+                label="Citação"
+                value={draft.quote}
+                onChange={(value) => setField("quote", value)}
+                rows={3}
+              />
+            </div>
+            <TextAreaField
+              label="Aparência"
+              value={draft.appearance}
+              onChange={(value) => setField("appearance", value)}
+            />
+            <TextAreaField
+              label="Objetivo pessoal"
+              value={draft.goal}
+              onChange={(value) => setField("goal", value)}
+            />
+            <div className="lg:col-span-2">
+              <TextAreaField
+                label="Histórico"
+                value={draft.history}
+                onChange={(value) => setField("history", value)}
+                rows={6}
+              />
+            </div>
+          </div>
+        </FormSection>
+
+        <FormSection
+          title="Evolução e relações"
+          description="Campos complementares para acompanhamento da campanha."
+        >
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <TextAreaField
+              label="Vínculos"
+              value={draft.bonds}
+              onChange={(value) => setField("bonds", value)}
+            />
+            <LinesField
+              label="Itens importantes"
+              value={draft.items}
+              onChange={(value) => setField("items", value)}
+            />
+            <TextAreaField
+              label="Notas de evolução"
+              value={draft.evolution}
+              onChange={(value) => setField("evolution", value)}
+            />
+            <TextAreaField
+              label="Relações com NPCs"
+              value={draft.relations}
+              onChange={(value) => setField("relations", value)}
+            />
+          </div>
+        </FormSection>
       </div>
     );
   }
 
   if (section === "npcs") {
     return (
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <Field
-          label="Slug da URL"
-          value={draft.slug}
-          onChange={(value) => setField("slug", value)}
-        />
-        <Field label="Nome" value={draft.name} onChange={(value) => setField("name", value)} />
-        <Field label="Papel" value={draft.role} onChange={(value) => setField("role", value)} />
-        <Field
-          label="Local"
-          value={draft.location}
-          onChange={(value) => setField("location", value)}
-        />
-        <Field
-          label="Relação"
-          value={draft.relation}
-          onChange={(value) => setField("relation", value)}
-        />
-        <Field
-          label="Status"
-          value={draft.status}
-          onChange={(value) => setField("status", value)}
-        />
-        <div className="lg:col-span-2">
+      <div className="space-y-6">
+        <FormSection title="Identidade" description="Dados principais do NPC nas páginas públicas.">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <Field label="Nome" value={draft.name} onChange={(value) => setField("name", value)} />
+            <Field
+              label="Slug da URL"
+              value={draft.slug}
+              onChange={(value) => setField("slug", value)}
+            />
+            <Field label="Papel" value={draft.role} onChange={(value) => setField("role", value)} />
+            <Field
+              label="Local"
+              value={draft.location}
+              onChange={(value) => setField("location", value)}
+            />
+            <Field
+              label="Relação"
+              value={draft.relation}
+              onChange={(value) => setField("relation", value)}
+            />
+            <Field
+              label="Status"
+              value={draft.status}
+              onChange={(value) => setField("status", value)}
+            />
+          </div>
+        </FormSection>
+
+        <FormSection title="Resumo">
           <TextAreaField
             label="Resumo"
             value={draft.summary}
             onChange={(value) => setField("summary", value)}
           />
-        </div>
+        </FormSection>
       </div>
     );
   }
 
   if (section === "archive") {
     return (
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <Field label="Slug" value={draft.slug} onChange={(value) => setField("slug", value)} />
-        <Field label="Título" value={draft.title} onChange={(value) => setField("title", value)} />
-        <SelectField
-          label="Tipo"
-          value={draft.type}
-          onChange={(value) => setField("type", value)}
-          options={["Carta", "Mapa", "Imagem", "Documento", "Handout"]}
-        />
-        <Field
-          label="Descoberto em"
-          value={draft.discovered}
-          onChange={(value) => setField("discovered", value)}
-        />
-        <div className="lg:col-span-2">
-          <TextAreaField
-            label="Descrição"
-            value={draft.description}
-            onChange={(value) => setField("description", value)}
-          />
-        </div>
-        <div className="lg:col-span-2">
-          <Field
-            label="Link externo"
-            value={draft.link}
-            onChange={(value) => setField("link", value)}
-          />
-        </div>
+      <div className="space-y-6">
+        <FormSection
+          title="Documento"
+          description="Metadados usados no arquivo público da campanha."
+        >
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <Field
+              label="Título"
+              value={draft.title}
+              onChange={(value) => setField("title", value)}
+            />
+            <Field label="Slug" value={draft.slug} onChange={(value) => setField("slug", value)} />
+            <SelectField
+              label="Tipo"
+              value={draft.type}
+              onChange={(value) => setField("type", value)}
+              options={["Carta", "Mapa", "Imagem", "Documento", "Handout"]}
+            />
+            <Field
+              label="Descoberto em"
+              value={draft.discovered}
+              onChange={(value) => setField("discovered", value)}
+            />
+          </div>
+        </FormSection>
+
+        <FormSection title="Conteúdo">
+          <div className="space-y-4">
+            <TextAreaField
+              label="Descrição"
+              value={draft.description}
+              onChange={(value) => setField("description", value)}
+            />
+            <Field
+              label="Link externo"
+              value={draft.link}
+              onChange={(value) => setField("link", value)}
+            />
+          </div>
+        </FormSection>
       </div>
     );
   }
 
   return (
-    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-      <Field label="Título" value={draft.title} onChange={(value) => setField("title", value)} />
-      <Field
-        label="Data/Contexto"
-        value={draft.date}
-        onChange={(value) => setField("date", value)}
-      />
-      <div className="lg:col-span-2">
+    <div className="space-y-6">
+      <FormSection title="Nota" description="Aviso público exibido na página de notas.">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <Field
+            label="Título"
+            value={draft.title}
+            onChange={(value) => setField("title", value)}
+          />
+          <Field
+            label="Data/Contexto"
+            value={draft.date}
+            onChange={(value) => setField("date", value)}
+          />
+        </div>
         <TextAreaField
           label="Texto"
           value={draft.body}
           onChange={(value) => setField("body", value)}
         />
-      </div>
+      </FormSection>
     </div>
   );
 }
@@ -719,6 +880,12 @@ function Editor({ username, onLogout }: { username: string; onLogout: () => void
     [section],
   );
   const items = getCollection(content, section);
+  const activeItem = items[selectedIndex];
+  const hasUnsavedChanges = useMemo(
+    () => Boolean(activeItem) && JSON.stringify(draft) !== JSON.stringify(activeItem),
+    [activeItem, draft],
+  );
+  const hasSelection = Boolean(activeItem);
 
   useEffect(() => {
     const currentItems = getCollection(content, section);
@@ -729,9 +896,25 @@ function Editor({ username, onLogout }: { username: string; onLogout: () => void
     );
   }, [content, section, selectedIndex]);
 
+  function confirmDiscardChanges() {
+    return (
+      !hasUnsavedChanges ||
+      window.confirm("Existem alterações não salvas. Deseja descartá-las e continuar?")
+    );
+  }
+
   function selectSection(nextSection: SectionKey) {
+    if (nextSection === section) return;
+    if (!confirmDiscardChanges()) return;
     setSection(nextSection);
     setSelectedIndex(0);
+    setSavedMessage("");
+  }
+
+  function selectItem(nextIndex: number) {
+    if (nextIndex === selectedIndex) return;
+    if (!confirmDiscardChanges()) return;
+    setSelectedIndex(nextIndex);
     setSavedMessage("");
   }
 
@@ -741,6 +924,7 @@ function Editor({ username, onLogout }: { username: string; onLogout: () => void
   }
 
   function addItem() {
+    if (!confirmDiscardChanges()) return;
     const next = cloneContent(content) as unknown as Record<SectionKey, DraftItem[]>;
     next[section] = [createItem(section, content), ...next[section]];
     writeCampaignContent(next as unknown as CampaignContent);
@@ -749,6 +933,7 @@ function Editor({ username, onLogout }: { username: string; onLogout: () => void
   }
 
   function saveItem() {
+    if (!hasSelection) return;
     const next = cloneContent(content) as unknown as Record<SectionKey, DraftItem[]>;
     next[section] = [...next[section]];
     next[section][selectedIndex] = draft;
@@ -765,6 +950,25 @@ function Editor({ username, onLogout }: { username: string; onLogout: () => void
     writeCampaignContent(next as unknown as CampaignContent);
     setSelectedIndex(0);
     setSavedMessage("Registro removido.");
+  }
+
+  function renderActionButtons() {
+    return (
+      <>
+        <IconButton onClick={addItem} variant="quiet">
+          <Plus className="h-4 w-4" />
+          Novo
+        </IconButton>
+        <IconButton onClick={deleteItem} variant="danger" disabled={!hasSelection}>
+          <Trash2 className="h-4 w-4" />
+          Remover
+        </IconButton>
+        <IconButton onClick={saveItem} disabled={!hasSelection || !hasUnsavedChanges}>
+          <Save className="h-4 w-4" />
+          Salvar
+        </IconButton>
+      </>
+    );
   }
 
   return (
@@ -814,19 +1018,13 @@ function Editor({ username, onLogout }: { username: string; onLogout: () => void
               <h2 className="font-display text-3xl text-foreground">{activeMeta.label}</h2>
               <p className="mt-1 text-sm text-muted-foreground">{activeMeta.description}</p>
             </div>
-            <div className="flex flex-wrap gap-2">
-              <IconButton onClick={addItem} variant="quiet">
-                <Plus className="h-4 w-4" />
-                Novo
-              </IconButton>
-              <IconButton onClick={deleteItem} variant="danger">
-                <Trash2 className="h-4 w-4" />
-                Remover
-              </IconButton>
-              <IconButton onClick={saveItem}>
-                <Save className="h-4 w-4" />
-                Salvar
-              </IconButton>
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              {hasUnsavedChanges && (
+                <span className="rounded border border-[var(--gold)]/40 px-2.5 py-1 text-xs text-[var(--gold)]">
+                  Alterações não salvas
+                </span>
+              )}
+              {renderActionButtons()}
             </div>
           </div>
 
@@ -837,7 +1035,7 @@ function Editor({ username, onLogout }: { username: string; onLogout: () => void
               </span>
               <select
                 value={selectedIndex}
-                onChange={(event) => setSelectedIndex(Number(event.target.value))}
+                onChange={(event) => selectItem(Number(event.target.value))}
                 className="mt-2 h-11 w-full rounded border border-border bg-background/70 px-3 text-sm text-foreground outline-none transition-colors focus:border-[var(--gold)]/70"
               >
                 {items.map((item, index) => (
@@ -862,6 +1060,14 @@ function Editor({ username, onLogout }: { username: string; onLogout: () => void
           )}
 
           {savedMessage && <p className="mt-4 text-sm text-[var(--gold)]">{savedMessage}</p>}
+          <div className="sticky bottom-0 z-10 -mx-5 mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-border/70 bg-background/95 px-5 py-4 backdrop-blur">
+            <p className="text-sm text-muted-foreground">
+              {hasUnsavedChanges
+                ? "Revise e salve antes de sair deste registro."
+                : savedMessage || "Nenhuma alteração pendente."}
+            </p>
+            <div className="flex flex-wrap gap-2">{renderActionButtons()}</div>
+          </div>
         </ChronicleCard>
       </div>
 
