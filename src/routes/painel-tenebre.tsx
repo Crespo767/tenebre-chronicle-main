@@ -14,7 +14,6 @@ import {
   type CampaignContent,
 } from "../lib/campaign-content";
 import {
-  MAX_ADMIN_USERS,
   loginAdminUser,
   logoutAdminUser,
   registerAdminUser,
@@ -302,7 +301,7 @@ function IconButton({
 }
 
 function AuthPanel({ onAuthenticated }: { onAuthenticated: () => void }) {
-  const { users, canRegister, refresh } = useAdminSession();
+  const { canRegister, refresh } = useAdminSession();
   const [mode, setMode] = useState<"login" | "register">("login");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -335,30 +334,29 @@ function AuthPanel({ onAuthenticated }: { onAuthenticated: () => void }) {
   }
 
   return (
-    <PageContainer className="max-w-3xl">
-      <SectionTitle
-        eyebrow="Acesso privado"
-        title="Painel Tenebre"
-        subtitle="Entre com login e senha para editar sessões, personagens, NPCs, arquivo e notas."
-        align="center"
-      />
-      <ChronicleCard>
-        <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-          <StatusBadge tone={canRegister ? "warn" : "ok"}>
-            {users.length}/{MAX_ADMIN_USERS} usuários registrados
-          </StatusBadge>
+    <PageContainer className="py-10 sm:py-12">
+      <div className="mx-auto max-w-[34rem] text-center">
+        <p className="text-xs uppercase tracking-[0.3em] text-[var(--gold)]/80">Acesso privado</p>
+        <h1 className="mt-3 font-display text-4xl text-foreground sm:text-5xl">Painel Tenebre</h1>
+        <p className="mx-auto mt-4 max-w-[30rem] text-center text-sm leading-relaxed text-muted-foreground sm:text-base">
+          Entre com login e senha para editar sessões, personagens, NPCs, arquivo e notas.
+        </p>
+        <div className="gold-rule mx-auto mt-5 w-32" />
+      </div>
+      <ChronicleCard className="mx-auto mt-7 w-full max-w-[24rem] p-4 sm:p-5">
+        <div className="mb-4 flex justify-end">
           {canRegister && (
             <button
               type="button"
               onClick={() => setMode(mode === "login" ? "register" : "login")}
-              className="text-sm text-[var(--gold)] hover:underline"
+              className="shrink-0 text-sm text-[var(--gold)] hover:underline"
             >
               {mode === "login" ? "Registrar novo usuário" : "Voltar ao login"}
             </button>
           )}
         </div>
 
-        <form onSubmit={submit} className="space-y-4">
+        <form onSubmit={submit} className="space-y-3.5">
           <Field label="Login" value={username} onChange={setUsername} />
           <label className="block">
             <span className="text-xs uppercase tracking-[0.22em] text-[var(--gold)]/80">Senha</span>
