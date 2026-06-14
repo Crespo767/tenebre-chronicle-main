@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { PageContainer, SectionTitle, ChronicleCard } from "../components/ui-chrome";
-import { masterNotes } from "../data/masterNotes";
+import { useCampaignContent } from "../lib/campaign-content";
 
 export const Route = createFileRoute("/notas")({
   head: () => ({
@@ -15,6 +15,8 @@ export const Route = createFileRoute("/notas")({
 });
 
 function NotesPage() {
+  const { masterNotes } = useCampaignContent();
+
   return (
     <PageContainer>
       <SectionTitle
@@ -28,17 +30,15 @@ function NotesPage() {
             <ChronicleCard as="article" className="h-full">
               <div className="flex items-baseline justify-between gap-3">
                 <h2 className="font-display text-xl text-[var(--gold)]">{n.title}</h2>
-                <span className="shrink-0 text-xs uppercase tracking-widest text-muted-foreground">{n.date}</span>
+                <span className="shrink-0 text-xs uppercase tracking-widest text-muted-foreground">
+                  {n.date}
+                </span>
               </div>
               <p className="mt-3 leading-relaxed text-foreground/90">{n.body}</p>
             </ChronicleCard>
           </li>
         ))}
       </ul>
-
-      <p className="mt-12 text-center text-xs uppercase tracking-[0.3em] text-muted-foreground/80">
-        Área privada do mestre — em breve
-      </p>
     </PageContainer>
   );
 }

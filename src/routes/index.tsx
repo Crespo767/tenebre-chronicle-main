@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { PageContainer, SectionTitle, ChronicleCard } from "../components/ui-chrome";
-import { masterNotes } from "../data/masterNotes";
+import { useCampaignContent } from "../lib/campaign-content";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -30,6 +30,8 @@ const quickLinks = [
 ] as const;
 
 function HomePage() {
+  const { masterNotes } = useCampaignContent();
+
   return (
     <>
       <section

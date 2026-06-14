@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { PageContainer, SectionTitle, ChronicleCard } from "../components/ui-chrome";
-import { sessions } from "../data/sessions";
+import { useCampaignContent } from "../lib/campaign-content";
 
 export const Route = createFileRoute("/sessoes")({
   head: () => ({
@@ -15,9 +15,15 @@ export const Route = createFileRoute("/sessoes")({
 });
 
 function SessionsPage() {
+  const { sessions } = useCampaignContent();
+
   return (
     <PageContainer>
-      <SectionTitle eyebrow="Registros" title="Sessões da Campanha" subtitle="Cada noite na mesa é um capítulo escrito a mais." />
+      <SectionTitle
+        eyebrow="Registros"
+        title="Sessões da Campanha"
+        subtitle="Cada noite na mesa é um capítulo escrito a mais."
+      />
       <ul className="grid grid-cols-1 gap-5 md:grid-cols-2">
         {sessions.map((s) => (
           <li key={s.slug}>

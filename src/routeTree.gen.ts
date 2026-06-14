@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as SessoesRouteImport } from './routes/sessoes'
 import { Route as PersonagensRouteImport } from './routes/personagens'
+import { Route as PainelTenebreRouteImport } from './routes/painel-tenebre'
 import { Route as NpcsRouteImport } from './routes/npcs'
 import { Route as NotasRouteImport } from './routes/notas'
 import { Route as ArquivoRouteImport } from './routes/arquivo'
@@ -32,6 +33,11 @@ const SessoesRoute = SessoesRouteImport.update({
 const PersonagensRoute = PersonagensRouteImport.update({
   id: '/personagens',
   path: '/personagens',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PainelTenebreRoute = PainelTenebreRouteImport.update({
+  id: '/painel-tenebre',
+  path: '/painel-tenebre',
   getParentRoute: () => rootRouteImport,
 } as any)
 const NpcsRoute = NpcsRouteImport.update({
@@ -70,6 +76,7 @@ export interface FileRoutesByFullPath {
   '/arquivo': typeof ArquivoRoute
   '/notas': typeof NotasRoute
   '/npcs': typeof NpcsRoute
+  '/painel-tenebre': typeof PainelTenebreRoute
   '/personagens': typeof PersonagensRouteWithChildren
   '/sessoes': typeof SessoesRouteWithChildren
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -81,6 +88,7 @@ export interface FileRoutesByTo {
   '/arquivo': typeof ArquivoRoute
   '/notas': typeof NotasRoute
   '/npcs': typeof NpcsRoute
+  '/painel-tenebre': typeof PainelTenebreRoute
   '/personagens': typeof PersonagensRouteWithChildren
   '/sessoes': typeof SessoesRouteWithChildren
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -93,6 +101,7 @@ export interface FileRoutesById {
   '/arquivo': typeof ArquivoRoute
   '/notas': typeof NotasRoute
   '/npcs': typeof NpcsRoute
+  '/painel-tenebre': typeof PainelTenebreRoute
   '/personagens': typeof PersonagensRouteWithChildren
   '/sessoes': typeof SessoesRouteWithChildren
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -106,6 +115,7 @@ export interface FileRouteTypes {
     | '/arquivo'
     | '/notas'
     | '/npcs'
+    | '/painel-tenebre'
     | '/personagens'
     | '/sessoes'
     | '/sitemap.xml'
@@ -117,6 +127,7 @@ export interface FileRouteTypes {
     | '/arquivo'
     | '/notas'
     | '/npcs'
+    | '/painel-tenebre'
     | '/personagens'
     | '/sessoes'
     | '/sitemap.xml'
@@ -128,6 +139,7 @@ export interface FileRouteTypes {
     | '/arquivo'
     | '/notas'
     | '/npcs'
+    | '/painel-tenebre'
     | '/personagens'
     | '/sessoes'
     | '/sitemap.xml'
@@ -140,6 +152,7 @@ export interface RootRouteChildren {
   ArquivoRoute: typeof ArquivoRoute
   NotasRoute: typeof NotasRoute
   NpcsRoute: typeof NpcsRoute
+  PainelTenebreRoute: typeof PainelTenebreRoute
   PersonagensRoute: typeof PersonagensRouteWithChildren
   SessoesRoute: typeof SessoesRouteWithChildren
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
@@ -166,6 +179,13 @@ declare module '@tanstack/react-router' {
       path: '/personagens'
       fullPath: '/personagens'
       preLoaderRoute: typeof PersonagensRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/painel-tenebre': {
+      id: '/painel-tenebre'
+      path: '/painel-tenebre'
+      fullPath: '/painel-tenebre'
+      preLoaderRoute: typeof PainelTenebreRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/npcs': {
@@ -241,6 +261,7 @@ const rootRouteChildren: RootRouteChildren = {
   ArquivoRoute: ArquivoRoute,
   NotasRoute: NotasRoute,
   NpcsRoute: NpcsRoute,
+  PainelTenebreRoute: PainelTenebreRoute,
   PersonagensRoute: PersonagensRouteWithChildren,
   SessoesRoute: SessoesRouteWithChildren,
   SitemapDotxmlRoute: SitemapDotxmlRoute,

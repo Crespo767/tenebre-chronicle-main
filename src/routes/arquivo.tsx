@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { PageContainer, SectionTitle, ChronicleCard, StatusBadge } from "../components/ui-chrome";
-import { archive } from "../data/archive";
+import { useCampaignContent } from "../lib/campaign-content";
 
 export const Route = createFileRoute("/arquivo")({
   head: () => ({
@@ -15,9 +15,15 @@ export const Route = createFileRoute("/arquivo")({
 });
 
 function ArchivePage() {
+  const { archive } = useCampaignContent();
+
   return (
     <PageContainer>
-      <SectionTitle eyebrow="Documentos" title="Arquivo" subtitle="Cartas, mapas, esboços e relíquias documentais." />
+      <SectionTitle
+        eyebrow="Documentos"
+        title="Arquivo"
+        subtitle="Cartas, mapas, esboços e relíquias documentais."
+      />
       <ul className="grid grid-cols-1 gap-5 md:grid-cols-2">
         {archive.map((it) => (
           <li key={it.slug}>

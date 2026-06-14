@@ -1,33 +1,14 @@
-import { createFileRoute, Link, notFound } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { PageContainer } from "../components/ui-chrome";
-import { sessions } from "../data/sessions";
+import { useCampaignContent } from "../lib/campaign-content";
 
 export const Route = createFileRoute("/sessoes/$slug")({
-  loader: ({ params }) => {
-    const session = sessions.find((s) => s.slug === params.slug);
-    if (!session) throw notFound();
-    return { session };
-  },
-  head: ({ loaderData }) => ({
-    meta: loaderData
-      ? [
-          { title: `${loaderData.session.title} — Tenebre` },
-          { name: "description", content: loaderData.session.summary },
-          { property: "og:title", content: `${loaderData.session.title} — Tenebre` },
-          { property: "og:description", content: loaderData.session.summary },
-        ]
-      : [],
+  head: () => ({
+    meta: [
+      { title: "Registro de sessão — Tenebre" },
+      { name: "description", content: "Registro de sessão da campanha Tenebre." },
+    ],
   }),
-  notFoundComponent: () => (
-    <PageContainer>
-      <p className="text-muted-foreground">Sessão não encontrada.</p>
-    </PageContainer>
-  ),
-  errorComponent: ({ error }) => (
-    <PageContainer>
-      <p className="text-muted-foreground">Erro ao carregar sessão: {error.message}</p>
-    </PageContainer>
-  ),
   component: SessionDetail,
 });
 
@@ -47,10 +28,24 @@ function Block({ title, items }: { title: string; items: string[] }) {
 }
 
 function SessionDetail() {
-  const { session } = Route.useLoaderData();
+  const { slug } = Route.useParams();
+  const { sessions } = useCampaignContent();
+  const session = sessions.find((s) => s.slug === slug);
+
+  if (!session) {
+    return (
+      <PageContainer>
+        <p className="text-muted-foreground">Sessão não encontrada.</p>
+      </PageContainer>
+    );
+  }
+
   return (
     <PageContainer>
-      <Link to="/sessoes" className="text-xs uppercase tracking-[0.25em] text-muted-foreground hover:text-[var(--gold)]">
+      <Link
+        to="/sessoes"
+        className="text-xs uppercase tracking-[0.25em] text-muted-foreground hover:text-[var(--gold)]"
+      >
         ← Sessões
       </Link>
       <article className="mt-6">
