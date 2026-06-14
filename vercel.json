@@ -1,0 +1,15 @@
+{
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist/client",
+  "functions": {
+    "api/index.mjs": {
+      "includeFiles": ["dist/server/**"]
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/((?!api/|assets/|robots.txt).*)",
+      "destination": "/api/index.mjs"
+    }
+  ]
+}

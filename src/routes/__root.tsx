@@ -10,14 +10,15 @@ import {
 import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
-import { reportLovableError } from "../lib/lovable-error-reporting";
 import { Header, Footer } from "../components/SiteChrome";
 
 function NotFoundComponent() {
   return (
     <div className="flex min-h-[60vh] items-center justify-center px-4">
       <div className="max-w-md text-center">
-        <p className="text-xs uppercase tracking-[0.3em] text-[var(--gold)]/80">Página perdida nas brumas</p>
+        <p className="text-xs uppercase tracking-[0.3em] text-[var(--gold)]/80">
+          Página perdida nas brumas
+        </p>
         <h1 className="mt-3 font-display text-5xl text-foreground">404</h1>
         <p className="mt-3 text-sm text-muted-foreground">
           O caminho que você procurava se desfez na neblina. Talvez nunca tenha existido.
@@ -39,7 +40,7 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   console.error(error);
   const router = useRouter();
   useEffect(() => {
-    reportLovableError(error, { boundary: "tanstack_root_error_component" });
+    console.error("Root route error boundary", error);
   }, [error]);
 
   return (
@@ -77,7 +78,11 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "Tenebre — Uma campanha de Symbaroum" },
-      { name: "description", content: "Wiki viva da campanha Tenebre: sessões, personagens, NPCs, facções, mundo e notas de mestre de uma crônica de dark fantasy inspirada em Symbaroum." },
+      {
+        name: "description",
+        content:
+          "Wiki viva da campanha Tenebre: sessões, personagens, NPCs, facções, mundo e notas de mestre de uma crônica de dark fantasy inspirada em Symbaroum.",
+      },
       { name: "author", content: "Tenebre" },
       { name: "theme-color", content: "#1a1612" },
       { property: "og:title", content: "Tenebre — Uma campanha de Symbaroum" },
