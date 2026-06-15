@@ -6,8 +6,8 @@ type SupabaseConfig = {
 };
 
 export function getSupabaseConfig(): SupabaseConfig | null {
-  const url = process.env.VITE_SUPABASE_URL;
-  const secretKey = process.env.SUPABASE_SECRET_KEY;
+  const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+  const secretKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY;
 
   if (!url || !secretKey) return null;
   return { url, secretKey };
@@ -20,7 +20,9 @@ export function getCharacterImagesBucket() {
 export function getSupabaseAdminClient() {
   const config = getSupabaseConfig();
   if (!config) {
-    throw new Error("Supabase server config is missing.");
+    throw new Error(
+      "Supabase server config is missing. Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY.",
+    );
   }
 
   return createClient(config.url, config.secretKey, {

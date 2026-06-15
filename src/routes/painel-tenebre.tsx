@@ -435,9 +435,13 @@ function IconButton({
 
 function AuthPanel({
   canRegister,
+  configured,
+  configMessage,
   onAuthenticated,
 }: {
   canRegister: boolean;
+  configured: boolean;
+  configMessage?: string;
   onAuthenticated: (username: string) => void;
 }) {
   const loginFn = useServerFn(loginAdminUser);
@@ -457,20 +461,24 @@ function AuthPanel({
     setBusy(true);
     setMessage("");
 
-    const credentials = { username, password };
-    const result =
-      mode === "register"
-        ? await registerFn({ data: credentials })
-        : await loginFn({ data: credentials });
+    try {
+      const credentials = { username, password };
+      const result =
+        mode === "register"
+          ? await registerFn({ data: credentials })
+          : await loginFn({ data: credentials });
 
-    setBusy(false);
+      if (!result.ok) {
+        setMessage(result.message);
+        return;
+      }
 
-    if (!result.ok) {
-      setMessage(result.message);
-      return;
+      onAuthenticated(result.username);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Falha ao autenticar.");
+    } finally {
+      setBusy(false);
     }
-
-    onAuthenticated(result.username);
   }
 
   return (
@@ -484,37 +492,60 @@ function AuthPanel({
         <div className="gold-rule mx-auto mt-5 w-32" />
       </div>
       <ChronicleCard className="mx-auto mt-7 w-full max-w-[24rem] p-4 sm:p-5">
-        {canRegister && (
-          <div className="mb-4 flex justify-end">
-            <button
-              type="button"
-              onClick={() => setMode(mode === "login" ? "register" : "login")}
-              className="shrink-0 text-sm text-[var(--gold)] hover:underline"
-            >
-              {mode === "login" ? "Registrar novo usuário" : "Voltar ao login"}
-            </button>
+        {!configured && (
+          <div className="space-y-3 text-left">
+            <div className="flex items-start gap-3 rounded border border-[var(--blood)]/40 bg-[var(--blood)]/10 p-3 text-sm text-foreground">
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-[oklch(0.75_0.12_25)]" />
+              <div>
+                <p className="font-medium text-[oklch(0.82_0.12_25)]">
+                  Supabase não configurado no servidor.
+                </p>
+                <p className="mt-1 leading-relaxed text-muted-foreground">
+                  {configMessage ||
+                    "Defina SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY no ambiente do deploy e publique novamente."}
+                </p>
+              </div>
+            </div>
           </div>
         )}
 
-        <form onSubmit={submit} className="space-y-3.5">
-          <Field label="Login" value={username} onChange={setUsername} />
-          <label className="block">
-            <span className="text-xs uppercase tracking-[0.22em] text-[var(--gold)]/80">Senha</span>
-            <input
-              type="password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              className="mt-2 h-11 w-full rounded border border-border bg-background/70 px-3 text-sm text-foreground outline-none transition-colors focus:border-[var(--gold)]/70"
-            />
-          </label>
+        {configured && (
+          <>
+            {canRegister && (
+              <div className="mb-4 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setMode(mode === "login" ? "register" : "login")}
+                  className="shrink-0 text-sm text-[var(--gold)] hover:underline"
+                >
+                  {mode === "login" ? "Registrar novo usuário" : "Voltar ao login"}
+                </button>
+              </div>
+            )}
 
-          {message && <p className="text-sm text-[oklch(0.75_0.12_25)]">{message}</p>}
+            <form onSubmit={submit} className="space-y-3.5">
+              <Field label="Login" value={username} onChange={setUsername} />
+              <label className="block">
+                <span className="text-xs uppercase tracking-[0.22em] text-[var(--gold)]/80">
+                  Senha
+                </span>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  className="mt-2 h-11 w-full rounded border border-border bg-background/70 px-3 text-sm text-foreground outline-none transition-colors focus:border-[var(--gold)]/70"
+                />
+              </label>
 
-          <IconButton type="submit">
-            <Save className="h-4 w-4" />
-            {busy ? "Processando..." : mode === "register" ? "Criar acesso" : "Entrar"}
-          </IconButton>
-        </form>
+              {message && <p className="text-sm text-[oklch(0.75_0.12_25)]">{message}</p>}
+
+              <IconButton type="submit">
+                <Save className="h-4 w-4" />
+                {busy ? "Processando..." : mode === "register" ? "Criar acesso" : "Entrar"}
+              </IconButton>
+            </form>
+          </>
+        )}
       </ChronicleCard>
     </PageContainer>
   );
@@ -1201,6 +1232,8 @@ function AdminPage() {
     return (
       <AuthPanel
         canRegister={admin.canRegister}
+        configured={admin.configured}
+        configMessage={admin.message}
         onAuthenticated={(nextUsername) => {
           setUsername(nextUsername);
           void router.invalidate();

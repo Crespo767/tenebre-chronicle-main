@@ -103,11 +103,18 @@ type AdminStatus = {
   username: string | null;
   userCount: number;
   canRegister: boolean;
+  configured: boolean;
+  message?: string;
 };
 
 async function getSupabase() {
   const { getSupabaseAdminClient } = await import("../supabase.server");
   return getSupabaseAdminClient();
+}
+
+async function hasSupabaseConfig() {
+  const { getSupabaseConfig } = await import("../supabase.server");
+  return Boolean(getSupabaseConfig());
 }
 
 async function getCharacterImagesBucket() {
@@ -429,6 +436,7 @@ async function readAdminStatus(): Promise<AdminStatus> {
     username,
     userCount,
     canRegister: userCount < MAX_ADMIN_USERS,
+    configured: true,
   };
 }
 
@@ -445,6 +453,18 @@ export const getCampaignContent = createServerFn({ method: "GET" }).handler(asyn
 
 export const getAdminStatus = createServerFn({ method: "GET" }).handler(async () => {
   setResponseHeaders({ "cache-control": "no-store" });
+
+  if (!(await hasSupabaseConfig())) {
+    return {
+      username: null,
+      userCount: 0,
+      canRegister: false,
+      configured: false,
+      message:
+        "Configuração do Supabase ausente no servidor. Defina SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY no ambiente do deploy.",
+    };
+  }
+
   return await readAdminStatus();
 });
 
