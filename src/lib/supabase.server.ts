@@ -5,7 +5,7 @@ type SupabaseConfig = {
   secretKey: string;
 };
 
-const SUPABASE_REQUEST_TIMEOUT_MS = 7_000;
+const SUPABASE_REQUEST_TIMEOUT_MS = 5_000;
 
 function isValidSupabaseUrl(value: string) {
   try {
@@ -16,14 +16,35 @@ function isValidSupabaseUrl(value: string) {
   }
 }
 
-async function fetchWithTimeout(input: RequestInfo | URL, init?: RequestInit) {
+function combineAbortSignals(signals: AbortSignal[]) {
+  if (signals.length === 1) return signals[0];
+  if (typeof AbortSignal.any === "function") return AbortSignal.any(signals);
+
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), SUPABASE_REQUEST_TIMEOUT_MS);
+
+  for (const signal of signals) {
+    if (signal.aborted) {
+      controller.abort(signal.reason);
+      break;
+    }
+
+    signal.addEventListener("abort", () => controller.abort(signal.reason), { once: true });
+  }
+
+  return controller.signal;
+}
+
+async function fetchWithTimeout(input: RequestInfo | URL, init?: RequestInit) {
+  const timeoutController = new AbortController();
+  const timeout = setTimeout(() => timeoutController.abort(), SUPABASE_REQUEST_TIMEOUT_MS);
+  const signal = init?.signal
+    ? combineAbortSignals([init.signal, timeoutController.signal])
+    : timeoutController.signal;
 
   try {
     return await fetch(input, {
       ...init,
-      signal: init?.signal ?? controller.signal,
+      signal,
     });
   } finally {
     clearTimeout(timeout);
