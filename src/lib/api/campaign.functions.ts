@@ -508,20 +508,15 @@ export const registerAdminUser = createServerFn({ method: "POST" })
 
       const username = data.username.trim();
       const normalized = username.toLowerCase();
-      const { data: existing, error: existingError } = await supabase
-        .from("admin_users")
-        .select("username")
-        .eq("username_normalized", normalized)
-        .maybeSingle();
-
-      if (existingError) throw new Error(existingError.message);
-      if (existing) return { ok: false as const, message: "Esse login já existe." };
 
       const { error } = await supabase.from("admin_users").insert({
         username,
         username_normalized: normalized,
         password_hash: await passwordHash(data.password),
       });
+      if (error?.code === "23505") {
+        return { ok: false as const, message: "Esse login já existe." };
+      }
       if (error) throw new Error(error.message);
 
       await createSession(username);
