@@ -425,12 +425,7 @@ async function requireAdmin() {
 async function readAdminStatus(): Promise<AdminStatus> {
   const supabase = await getSupabase();
   const username = await getSessionUsername();
-  const { count, error } = await supabase
-    .from("admin_users")
-    .select("username", { count: "exact", head: true });
-
-  if (error) throw new Error(error.message);
-  const userCount = count ?? 0;
+  const userCount = await readAdminUserCount(supabase);
 
   return {
     username,
@@ -438,6 +433,16 @@ async function readAdminStatus(): Promise<AdminStatus> {
     canRegister: userCount < MAX_ADMIN_USERS,
     configured: true,
   };
+}
+
+async function readAdminUserCount(supabase?: Awaited<ReturnType<typeof getSupabase>>) {
+  const client = supabase ?? (await getSupabase());
+  const { count, error } = await client
+    .from("admin_users")
+    .select("username", { count: "exact", head: true });
+
+  if (error) throw new Error(error.message);
+  return count ?? 0;
 }
 
 function getAdminErrorMessage(error: unknown) {
@@ -495,9 +500,9 @@ export const registerAdminUser = createServerFn({ method: "POST" })
     setResponseHeaders({ "cache-control": "no-store" });
     try {
       const supabase = await getSupabase();
-      const status = await readAdminStatus();
+      const userCount = await readAdminUserCount(supabase);
 
-      if (!status.canRegister) {
+      if (userCount >= MAX_ADMIN_USERS) {
         return { ok: false as const, message: "O limite de 2 usuários já foi atingido." };
       }
 

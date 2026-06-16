@@ -5,7 +5,7 @@ type SupabaseConfig = {
   secretKey: string;
 };
 
-const SUPABASE_REQUEST_TIMEOUT_MS = 8_000;
+const SUPABASE_REQUEST_TIMEOUT_MS = 20_000;
 
 function isValidSupabaseUrl(value: string) {
   try {
