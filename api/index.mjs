@@ -3,6 +3,7 @@ import { Readable } from "node:stream";
 import server from "../dist/server/server.js";
 
 const BODYLESS_METHODS = new Set(["GET", "HEAD"]);
+const RUNTIME_TIMEOUT_MS = 25_000;
 
 function createHeaders(incomingHeaders) {
   const headers = new Headers();
@@ -32,8 +33,40 @@ function createRequest(req) {
   });
 }
 
+function createTimeoutResponse(req) {
+  console.error(`[vercel-runtime-timeout-guard] ${req.method ?? "GET"} ${req.url ?? "/"}`);
+
+  return new Response("A solicitação demorou demais para responder.", {
+    status: 504,
+    headers: {
+      "cache-control": "no-store",
+      "content-type": "text/plain; charset=utf-8",
+    },
+  });
+}
+
+async function fetchWithRuntimeTimeout(req) {
+  let timeout;
+  const request = createRequest(req);
+  const responsePromise = Promise.resolve(server.fetch(request, {}, {}));
+
+  responsePromise.catch((error) => {
+    console.error("[vercel-runtime-late-error]", error);
+  });
+
+  const timeoutPromise = new Promise((resolve) => {
+    timeout = setTimeout(() => resolve(createTimeoutResponse(req)), RUNTIME_TIMEOUT_MS);
+  });
+
+  try {
+    return await Promise.race([responsePromise, timeoutPromise]);
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 export default async function handler(req, res) {
-  const response = await server.fetch(createRequest(req), {}, {});
+  const response = await fetchWithRuntimeTimeout(req);
 
   res.statusCode = response.status;
   response.headers.forEach((value, key) => {
