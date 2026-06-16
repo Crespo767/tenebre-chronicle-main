@@ -18,6 +18,13 @@ import {
 const MAX_ADMIN_USERS = 2;
 const SESSION_COOKIE = "tenebre_admin_session";
 const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 7;
+const SCRYPT_KEY_LENGTH = 64;
+const SCRYPT_OPTIONS = {
+  N: 8192,
+  r: 8,
+  p: 1,
+  maxmem: 32 * 1024 * 1024,
+};
 
 const stringArraySchema = z.array(z.string());
 
@@ -124,6 +131,21 @@ async function getCharacterImagesBucket() {
 
 async function getCrypto() {
   return await import("node:crypto");
+}
+
+async function derivePasswordKey(password: string, salt: string) {
+  const { scrypt } = await getCrypto();
+
+  return await new Promise<Buffer>((resolve, reject) => {
+    scrypt(password, salt, SCRYPT_KEY_LENGTH, SCRYPT_OPTIONS, (error, derivedKey) => {
+      if (error) {
+        reject(error);
+        return;
+      }
+
+      resolve(derivedKey);
+    });
+  });
 }
 
 function asString(row: Record<string, unknown>, key: string, fallback = "") {
@@ -349,9 +371,9 @@ async function saveCampaignContentToDb(content: CampaignContent) {
 }
 
 async function passwordHash(password: string) {
-  const { randomBytes, scryptSync } = await getCrypto();
+  const { randomBytes } = await getCrypto();
   const salt = randomBytes(16).toString("hex");
-  const hash = scryptSync(password, salt, 64).toString("hex");
+  const hash = (await derivePasswordKey(password, salt)).toString("hex");
   return `scrypt:${salt}:${hash}`;
 }
 
@@ -359,8 +381,8 @@ async function verifyPassword(password: string, storedHash: string) {
   const [algorithm, salt, hash] = storedHash.split(":");
   if (algorithm !== "scrypt" || !salt || !hash) return false;
 
-  const { scryptSync, timingSafeEqual } = await getCrypto();
-  const actual = Buffer.from(scryptSync(password, salt, 64).toString("hex"), "hex");
+  const { timingSafeEqual } = await getCrypto();
+  const actual = await derivePasswordKey(password, salt);
   const expected = Buffer.from(hash, "hex");
 
   if (actual.length !== expected.length) return false;
@@ -498,9 +520,17 @@ export const registerAdminUser = createServerFn({ method: "POST" })
   .validator(credentialsSchema)
   .handler(async ({ data }) => {
     setResponseHeaders({ "cache-control": "no-store" });
+    const startedAt = Date.now();
+    const logStep = (step: string) => {
+      console.info(`[registerAdminUser] ${step} ${Date.now() - startedAt}ms`);
+    };
+
     try {
+      logStep("start");
       const supabase = await getSupabase();
+      logStep("client");
       const userCount = await readAdminUserCount(supabase);
+      logStep("count");
 
       if (userCount >= MAX_ADMIN_USERS) {
         return { ok: false as const, message: "O limite de 2 usuários já foi atingido." };
@@ -508,18 +538,22 @@ export const registerAdminUser = createServerFn({ method: "POST" })
 
       const username = data.username.trim();
       const normalized = username.toLowerCase();
+      const password_hash = await passwordHash(data.password);
+      logStep("hash");
 
       const { error } = await supabase.from("admin_users").insert({
         username,
         username_normalized: normalized,
-        password_hash: await passwordHash(data.password),
+        password_hash,
       });
+      logStep("insert");
       if (error?.code === "23505") {
         return { ok: false as const, message: "Esse login já existe." };
       }
       if (error) throw new Error(error.message);
 
       await createSession(username);
+      logStep("session");
       return { ok: true as const, username };
     } catch (error) {
       console.error(error);
