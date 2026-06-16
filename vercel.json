@@ -3,6 +3,10 @@
   "outputDirectory": "dist/client",
   "rewrites": [
     {
+      "source": "/_serverFn/(.*)",
+      "destination": "/api/index.mjs"
+    },
+    {
       "source": "/((?!api/|assets/|robots.txt).*)",
       "destination": "/api/index.mjs"
     }

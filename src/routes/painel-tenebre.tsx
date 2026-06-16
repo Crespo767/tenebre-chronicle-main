@@ -433,6 +433,18 @@ function IconButton({
   );
 }
 
+function withTimeout<T>(promise: Promise<T>, message: string, timeoutMs = 12_000) {
+  let timeout: number | undefined;
+
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timeout = window.setTimeout(() => reject(new Error(message)), timeoutMs);
+  });
+
+  return Promise.race([promise, timeoutPromise]).finally(() => {
+    if (timeout !== undefined) window.clearTimeout(timeout);
+  });
+}
+
 function AuthPanel({
   canRegister,
   configured,
@@ -458,6 +470,8 @@ function AuthPanel({
 
   async function submit(event: FormEvent) {
     event.preventDefault();
+    if (busy) return;
+
     setBusy(true);
     setMessage("");
 
@@ -465,8 +479,14 @@ function AuthPanel({
       const credentials = { username, password };
       const result =
         mode === "register"
-          ? await registerFn({ data: credentials })
-          : await loginFn({ data: credentials });
+          ? await withTimeout(
+              registerFn({ data: credentials }),
+              "O cadastro demorou para responder. Verifique a configuração do Supabase e tente novamente.",
+            )
+          : await withTimeout(
+              loginFn({ data: credentials }),
+              "O login demorou para responder. Verifique a configuração do Supabase e tente novamente.",
+            );
 
       if (!result.ok) {
         setMessage(result.message);
@@ -539,7 +559,7 @@ function AuthPanel({
 
               {message && <p className="text-sm text-[oklch(0.75_0.12_25)]">{message}</p>}
 
-              <IconButton type="submit">
+              <IconButton type="submit" disabled={busy}>
                 <Save className="h-4 w-4" />
                 {busy ? "Processando..." : mode === "register" ? "Criar acesso" : "Entrar"}
               </IconButton>

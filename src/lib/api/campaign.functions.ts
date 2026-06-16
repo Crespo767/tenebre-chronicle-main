@@ -440,6 +440,16 @@ async function readAdminStatus(): Promise<AdminStatus> {
   };
 }
 
+function getAdminErrorMessage(error: unknown) {
+  if (error instanceof Error && error.name === "AbortError") {
+    return "O Supabase demorou para responder. Verifique SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY e se o projeto está ativo.";
+  }
+
+  if (error instanceof Error && error.message) return error.message;
+
+  return "Falha ao conectar ao Supabase.";
+}
+
 export const getCampaignContent = createServerFn({ method: "GET" }).handler(async () => {
   setResponseHeaders({ "cache-control": "no-store" });
 
@@ -465,64 +475,85 @@ export const getAdminStatus = createServerFn({ method: "GET" }).handler(async ()
     };
   }
 
-  return await readAdminStatus();
+  try {
+    return await readAdminStatus();
+  } catch (error) {
+    console.error(error);
+    return {
+      username: null,
+      userCount: 0,
+      canRegister: false,
+      configured: false,
+      message: getAdminErrorMessage(error),
+    };
+  }
 });
 
 export const registerAdminUser = createServerFn({ method: "POST" })
   .validator(credentialsSchema)
   .handler(async ({ data }) => {
     setResponseHeaders({ "cache-control": "no-store" });
-    const supabase = await getSupabase();
-    const status = await readAdminStatus();
+    try {
+      const supabase = await getSupabase();
+      const status = await readAdminStatus();
 
-    if (!status.canRegister) {
-      return { ok: false as const, message: "O limite de 2 usuários já foi atingido." };
+      if (!status.canRegister) {
+        return { ok: false as const, message: "O limite de 2 usuários já foi atingido." };
+      }
+
+      const username = data.username.trim();
+      const normalized = username.toLowerCase();
+      const { data: existing, error: existingError } = await supabase
+        .from("admin_users")
+        .select("username")
+        .eq("username_normalized", normalized)
+        .maybeSingle();
+
+      if (existingError) throw new Error(existingError.message);
+      if (existing) return { ok: false as const, message: "Esse login já existe." };
+
+      const { error } = await supabase.from("admin_users").insert({
+        username,
+        username_normalized: normalized,
+        password_hash: await passwordHash(data.password),
+      });
+      if (error) throw new Error(error.message);
+
+      await createSession(username);
+      return { ok: true as const, username };
+    } catch (error) {
+      console.error(error);
+      return { ok: false as const, message: getAdminErrorMessage(error) };
     }
-
-    const username = data.username.trim();
-    const normalized = username.toLowerCase();
-    const { data: existing, error: existingError } = await supabase
-      .from("admin_users")
-      .select("username")
-      .eq("username_normalized", normalized)
-      .maybeSingle();
-
-    if (existingError) throw new Error(existingError.message);
-    if (existing) return { ok: false as const, message: "Esse login já existe." };
-
-    const { error } = await supabase.from("admin_users").insert({
-      username,
-      username_normalized: normalized,
-      password_hash: await passwordHash(data.password),
-    });
-    if (error) throw new Error(error.message);
-
-    await createSession(username);
-    return { ok: true as const, username };
   });
 
 export const loginAdminUser = createServerFn({ method: "POST" })
   .validator(credentialsSchema)
   .handler(async ({ data }) => {
     setResponseHeaders({ "cache-control": "no-store" });
-    const supabase = await getSupabase();
-    const normalized = data.username.trim().toLowerCase();
-    const { data: user, error } = await supabase
-      .from("admin_users")
-      .select("username, password_hash")
-      .eq("username_normalized", normalized)
-      .maybeSingle();
+    try {
+      const supabase = await getSupabase();
+      const normalized = data.username.trim().toLowerCase();
+      const { data: user, error } = await supabase
+        .from("admin_users")
+        .select("username, password_hash")
+        .eq("username_normalized", normalized)
+        .maybeSingle();
 
-    if (error) throw new Error(error.message);
-    if (!user) return { ok: false as const, message: "Login ou senha inválidos." };
+      if (error) throw new Error(error.message);
+      if (!user) return { ok: false as const, message: "Login ou senha inválidos." };
 
-    const row = user as Record<string, unknown>;
-    const matches = await verifyPassword(data.password, asString(row, "password_hash"));
-    if (!matches) return { ok: false as const, message: "Login ou senha inválidos." };
+      const row = user as Record<string, unknown>;
+      const matches = await verifyPassword(data.password, asString(row, "password_hash"));
+      if (!matches) return { ok: false as const, message: "Login ou senha inválidos." };
 
-    const username = asString(row, "username");
-    await createSession(username);
-    return { ok: true as const, username };
+      const username = asString(row, "username");
+      await createSession(username);
+      return { ok: true as const, username };
+    } catch (error) {
+      console.error(error);
+      return { ok: false as const, message: getAdminErrorMessage(error) };
+    }
   });
 
 export const logoutAdminUser = createServerFn({ method: "POST" }).handler(async () => {
