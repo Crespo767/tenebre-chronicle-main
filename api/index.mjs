@@ -1,5 +1,3 @@
-import { Readable } from "node:stream";
-
 import server from "../dist/server/server.js";
 
 const BODYLESS_METHODS = new Set(["GET", "HEAD"]);
@@ -19,17 +17,19 @@ function createHeaders(incomingHeaders) {
   return headers;
 }
 
-function createRequest(req) {
+async function createRequest(req) {
   const protocol = req.headers["x-forwarded-proto"] ?? "https";
   const host = req.headers.host ?? "localhost";
   const url = new URL(req.url ?? "/", `${protocol}://${host}`);
   const method = req.method ?? "GET";
+  const body = BODYLESS_METHODS.has(method)
+    ? undefined
+    : Buffer.concat(await Array.fromAsync(req, (chunk) => Buffer.from(chunk)));
 
   return new Request(url, {
     method,
     headers: createHeaders(req.headers),
-    body: BODYLESS_METHODS.has(method) ? undefined : Readable.toWeb(req),
-    duplex: BODYLESS_METHODS.has(method) ? undefined : "half",
+    body,
   });
 }
 
@@ -47,8 +47,7 @@ function createTimeoutResponse(req) {
 
 async function fetchWithRuntimeTimeout(req) {
   let timeout;
-  const request = createRequest(req);
-  const responsePromise = Promise.resolve(server.fetch(request, {}, {}));
+  const responsePromise = createRequest(req).then((request) => server.fetch(request, {}, {}));
 
   responsePromise.catch((error) => {
     console.error("[vercel-runtime-late-error]", error);
