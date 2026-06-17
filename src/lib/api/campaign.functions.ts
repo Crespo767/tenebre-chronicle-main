@@ -19,12 +19,14 @@ const MAX_ADMIN_USERS = 2;
 const SESSION_COOKIE = "tenebre_admin_session";
 const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 7;
 const SCRYPT_KEY_LENGTH = 64;
+const CONTENT_CACHE_TTL_MS = 10_000;
 const SCRYPT_OPTIONS = {
   N: 8192,
   r: 8,
   p: 1,
   maxmem: 32 * 1024 * 1024,
 };
+let contentCache: { content: CampaignContent; expiresAt: number } | null = null;
 
 const stringArraySchema = z.array(z.string());
 
@@ -263,6 +265,19 @@ async function readCampaignContentFromDb(): Promise<CampaignContent> {
   });
 }
 
+async function readCampaignContent(allowCache = true): Promise<CampaignContent> {
+  if (allowCache && contentCache && contentCache.expiresAt > Date.now()) {
+    return cloneContent(contentCache.content);
+  }
+
+  const content = await readCampaignContentFromDb();
+  contentCache = {
+    content: cloneContent(content),
+    expiresAt: Date.now() + CONTENT_CACHE_TTL_MS,
+  };
+  return content;
+}
+
 async function replaceTable(table: string, deleteColumn: string, rows: Record<string, unknown>[]) {
   const supabase = await getSupabase();
   const deleted = await supabase.from(table).delete().neq(deleteColumn, "__tenebre_never__");
@@ -352,6 +367,11 @@ async function saveCampaignContentToDb(content: CampaignContent) {
       })),
     ),
   ]);
+
+  contentCache = {
+    content: cloneContent(content),
+    expiresAt: Date.now() + CONTENT_CACHE_TTL_MS,
+  };
 }
 
 async function passwordHash(password: string) {
@@ -465,11 +485,17 @@ export const getCampaignContent = createServerFn({ method: "GET" }).handler(asyn
   setResponseHeaders({ "cache-control": "no-store" });
 
   try {
-    return await readCampaignContentFromDb();
+    return await readCampaignContent();
   } catch (error) {
     console.error(error);
     return cloneContent(defaultCampaignContent);
   }
+});
+
+export const getAdminCampaignContent = createServerFn({ method: "GET" }).handler(async () => {
+  setResponseHeaders({ "cache-control": "no-store" });
+  await requireAdmin();
+  return await readCampaignContent(false);
 });
 
 export const getAdminStatus = createServerFn({ method: "GET" }).handler(async () => {
@@ -504,17 +530,9 @@ export const registerAdminUser = createServerFn({ method: "POST" })
   .validator(credentialsSchema)
   .handler(async ({ data }) => {
     setResponseHeaders({ "cache-control": "no-store" });
-    const startedAt = Date.now();
-    const logStep = (step: string) => {
-      console.info(`[registerAdminUser] ${step} ${Date.now() - startedAt}ms`);
-    };
-
     try {
-      logStep("start");
       const supabase = await getSupabase();
-      logStep("client");
       const userCount = await readAdminUserCount(supabase);
-      logStep("count");
 
       if (userCount >= MAX_ADMIN_USERS) {
         return { ok: false as const, message: "O limite de 2 usuários já foi atingido." };
@@ -523,21 +541,18 @@ export const registerAdminUser = createServerFn({ method: "POST" })
       const username = data.username.trim();
       const normalized = username.toLowerCase();
       const password_hash = await passwordHash(data.password);
-      logStep("hash");
 
       const { error } = await supabase.from("admin_users").insert({
         username,
         username_normalized: normalized,
         password_hash,
       });
-      logStep("insert");
       if (error?.code === "23505") {
         return { ok: false as const, message: "Esse login já existe." };
       }
       if (error) throw new Error(error.message);
 
       await createSession(username);
-      logStep("session");
       return { ok: true as const, username };
     } catch (error) {
       console.error(error);

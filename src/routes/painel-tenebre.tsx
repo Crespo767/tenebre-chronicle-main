@@ -2,6 +2,7 @@ import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import {
   AlertTriangle,
+  ChevronDown,
   ClipboardPaste,
   Download,
   Image,
@@ -13,7 +14,7 @@ import {
   Trash2,
   Upload,
 } from "lucide-react";
-import { useEffect, useMemo, useState, type ClipboardEvent, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type ClipboardEvent, type FormEvent } from "react";
 
 import { PageContainer, SectionTitle, ChronicleCard, StatusBadge } from "../components/ui-chrome";
 import {
@@ -23,8 +24,8 @@ import {
   type CampaignContent,
 } from "../lib/campaign-content";
 import {
+  getAdminCampaignContent,
   getAdminStatus,
-  getCampaignContent,
   loginAdminUser,
   logoutAdminUser,
   registerAdminUser,
@@ -54,10 +55,15 @@ const sections: {
 ];
 
 export const Route = createFileRoute("/painel-tenebre")({
-  loader: async () => ({
-    admin: await getAdminStatus(),
-    content: await getCampaignContent(),
-  }),
+  loader: async () => {
+    const admin = await getAdminStatus();
+    return {
+      admin,
+      content: admin.username
+        ? await getAdminCampaignContent()
+        : cloneContent(defaultCampaignContent),
+    };
+  },
   head: () => ({
     meta: [
       { title: "Painel Tenebre" },
@@ -115,6 +121,10 @@ function findStoredItemIndex(items: DraftItem[], itemKey: unknown, fallbackIndex
 
   if (items.length === 0) return 0;
   return Math.max(0, Math.min(Math.trunc(index), items.length - 1));
+}
+
+function getErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error && error.message ? error.message : fallback;
 }
 
 function readStoredEditorState(content: CampaignContent) {
@@ -336,6 +346,7 @@ function SelectField({
   emptyOption?: { value: string; label: string };
 }) {
   const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement | null>(null);
   const entries =
     options.length > 0
       ? options.map((option) =>
@@ -353,8 +364,19 @@ function SelectField({
     setOpen(false);
   }
 
+  useEffect(() => {
+    if (!open) return;
+
+    function closeOnOutsideClick(event: MouseEvent) {
+      if (!containerRef.current?.contains(event.target as Node)) setOpen(false);
+    }
+
+    window.addEventListener("mousedown", closeOnOutsideClick);
+    return () => window.removeEventListener("mousedown", closeOnOutsideClick);
+  }, [open]);
+
   return (
-    <div className="relative">
+    <div ref={containerRef} className="relative">
       <span className="text-xs uppercase tracking-[0.22em] text-[var(--gold)]/80">{label}</span>
       <button
         type="button"
@@ -362,7 +384,11 @@ function SelectField({
         className="mt-2 flex h-11 w-full items-center justify-between rounded-sm border border-border bg-background/70 px-3 text-left text-sm text-foreground outline-none transition-colors hover:border-[var(--gold)]/40 focus:border-[var(--gold)]/70"
       >
         <span className="truncate">{selectedLabel}</span>
-        <span className="ml-3 text-[var(--gold)]/70">▾</span>
+        <ChevronDown
+          className={`ml-3 h-4 w-4 shrink-0 text-[var(--gold)]/70 transition-transform ${
+            open ? "rotate-180" : ""
+          }`}
+        />
       </button>
       {open && (
         <div className="absolute z-40 mt-1 max-h-64 w-full overflow-y-auto rounded-sm border border-[var(--gold)]/50 bg-background shadow-[0_16px_44px_oklch(0.08_0.01_95_/_0.45)]">
@@ -665,7 +691,9 @@ function DialogFrame({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 px-4 backdrop-blur-sm">
       <div className="w-full max-w-md rounded-sm border border-border bg-background p-5 shadow-[0_18px_70px_oklch(0.08_0.01_95_/_0.55)]">
         <h2 className="font-display text-3xl text-foreground">{title}</h2>
-        {description && <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{description}</p>}
+        {description && (
+          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{description}</p>
+        )}
         <div className="mt-5">{children}</div>
       </div>
     </div>
@@ -678,6 +706,7 @@ function NewItemDialog({
   onChange,
   onCancel,
   onConfirm,
+  message,
   busy = false,
 }: {
   sectionLabel: string;
@@ -685,6 +714,7 @@ function NewItemDialog({
   onChange: (value: string) => void;
   onCancel: () => void;
   onConfirm: () => void | Promise<void>;
+  message?: string;
   busy?: boolean;
 }) {
   function submit(event: FormEvent) {
@@ -699,6 +729,7 @@ function NewItemDialog({
     >
       <form onSubmit={submit} className="space-y-4">
         <Field label="Nome" value={value} onChange={onChange} />
+        {message && <p className="text-sm text-muted-foreground">{message}</p>}
         <div className="flex flex-wrap justify-end gap-2">
           <IconButton onClick={onCancel} variant="quiet" disabled={busy}>
             Cancelar
@@ -716,11 +747,13 @@ function ConfirmDeleteDialog({
   itemLabel,
   onCancel,
   onConfirm,
+  message,
   busy = false,
 }: {
   itemLabel: string;
   onCancel: () => void;
   onConfirm: () => void | Promise<void>;
+  message?: string;
   busy?: boolean;
 }) {
   return (
@@ -728,6 +761,7 @@ function ConfirmDeleteDialog({
       title="Remover registro"
       description={`Confirme a remoção de "${itemLabel}". Esta ação será salva imediatamente.`}
     >
+      {message && <p className="mb-4 text-sm text-muted-foreground">{message}</p>}
       <div className="flex flex-wrap justify-end gap-2">
         <IconButton onClick={onCancel} variant="quiet" disabled={busy}>
           Cancelar
@@ -1085,7 +1119,6 @@ function SectionForm({
             </div>
           </div>
         </FormSection>
-
       </div>
     );
   }
@@ -1156,16 +1189,9 @@ function SectionForm({
             <Field label="Slug" value={draft.slug} onChange={(value) => setField("slug", value)} />
             <SelectField
               label="Tipo"
-              value={
-                String(draft.type ?? "").trim() === "" ? otherArchiveTypeValue : draft.type
-              }
-              onChange={(value) =>
-                setField("type", value === otherArchiveTypeValue ? "" : value)
-              }
-              options={[
-                ...archiveTypeOptions,
-                { value: otherArchiveTypeValue, label: "Outros" },
-              ]}
+              value={String(draft.type ?? "").trim() === "" ? otherArchiveTypeValue : draft.type}
+              onChange={(value) => setField("type", value === otherArchiveTypeValue ? "" : value)}
+              options={[...archiveTypeOptions, { value: otherArchiveTypeValue, label: "Outros" }]}
             />
             {String(draft.type ?? "").trim() === "" && (
               <Field
@@ -1242,7 +1268,7 @@ function BackupPanel({
   onReplace,
 }: {
   content: CampaignContent;
-  onReplace: (content: CampaignContent, message: string) => Promise<void>;
+  onReplace: (content: CampaignContent, message: string) => Promise<boolean>;
 }) {
   const [importText, setImportText] = useState("");
   const [message, setMessage] = useState("");
@@ -1272,9 +1298,13 @@ function BackupPanel({
       ) {
         throw new Error("Formato incompleto.");
       }
-      await onReplace(parsed, "Conteúdo importado.");
-      setImportText("");
-      setMessage("Conteúdo importado.");
+      const saved = await onReplace(parsed, "Conteúdo importado.");
+      if (saved) {
+        setImportText("");
+        setMessage("Conteúdo importado.");
+      } else {
+        setMessage("Falha ao importar. O conteúdo anterior foi mantido.");
+      }
     } catch (error) {
       setMessage(
         error instanceof Error ? error.message : "JSON inválido ou fora do formato esperado.",
@@ -1283,9 +1313,16 @@ function BackupPanel({
   }
 
   async function resetAll() {
-    await onReplace(cloneContent(defaultCampaignContent), "Conteúdo original restaurado.");
-    setMessage("Conteúdo original restaurado.");
-    setShowResetDialog(false);
+    const saved = await onReplace(
+      cloneContent(defaultCampaignContent),
+      "Conteúdo original restaurado.",
+    );
+    if (saved) {
+      setMessage("Conteúdo original restaurado.");
+      setShowResetDialog(false);
+    } else {
+      setMessage("Falha ao restaurar. O conteúdo anterior foi mantido.");
+    }
   }
 
   return (
@@ -1348,8 +1385,12 @@ function Editor({
   const saveContentFn = useServerFn(saveCampaignContent);
   const uploadImageFn = useServerFn(uploadCharacterImage);
   const [content, setContent] = useState<CampaignContent>(() => cloneContent(initialContent));
-  const [section, setSection] = useState<SectionKey>(() => readStoredEditorState(initialContent).section);
-  const [selectedIndex, setSelectedIndex] = useState(() => readStoredEditorState(initialContent).index);
+  const [section, setSection] = useState<SectionKey>(
+    () => readStoredEditorState(initialContent).section,
+  );
+  const [selectedIndex, setSelectedIndex] = useState(
+    () => readStoredEditorState(initialContent).index,
+  );
   const [draft, setDraft] = useState<DraftItem>(
     () => cloneContent(defaultCampaignContent).sessions[0] as DraftItem,
   );
@@ -1367,9 +1408,7 @@ function Editor({
     [section],
   );
   const archiveTypeOptions = useMemo(() => {
-    const types = content.archive
-      .map((item) => item.type.trim())
-      .filter(Boolean);
+    const types = content.archive.map((item) => item.type.trim()).filter(Boolean);
     return Array.from(new Set([...defaultArchiveTypes, ...types]));
   }, [content.archive]);
   const items = getCollection(content, section);
@@ -1466,6 +1505,10 @@ function Editor({
         return nextRevision;
       });
       setSavedMessage(message);
+      return true;
+    } catch (error) {
+      setSavedMessage(getErrorMessage(error, "Falha ao salvar. Tente novamente."));
+      return false;
     } finally {
       setIsSaving(false);
     }
@@ -1497,6 +1540,7 @@ function Editor({
     runOrConfirmDiscard(() => {
       const nextItem = createItem(section, content);
       setNewItemName(String(nextItem.name ?? nextItem.title ?? ""));
+      setSavedMessage("");
       setShowNewDialog(true);
     });
   }
@@ -1559,8 +1603,8 @@ function Editor({
     next[section] = [newItem, ...next[section]];
     setSelectedIndex(0);
     setDraft(newItem);
-    await persistContent(next as unknown as CampaignContent, "Novo registro criado.");
-    setShowNewDialog(false);
+    const saved = await persistContent(next as unknown as CampaignContent, "Novo registro criado.");
+    if (saved) setShowNewDialog(false);
   }
 
   async function saveItem() {
@@ -1575,6 +1619,7 @@ function Editor({
 
   function openDeleteDialog() {
     if (!items[selectedIndex]) return;
+    setSavedMessage("");
     setShowDeleteDialog(true);
   }
 
@@ -1582,9 +1627,11 @@ function Editor({
     if (!items[selectedIndex]) return;
     const next = cloneContent(content) as unknown as Record<SectionKey, DraftItem[]>;
     next[section] = next[section].filter((_, index) => index !== selectedIndex);
-    setShowDeleteDialog(false);
-    await persistContent(next as unknown as CampaignContent, "Registro removido.");
-    setSelectedIndex(0);
+    const saved = await persistContent(next as unknown as CampaignContent, "Registro removido.");
+    if (saved) {
+      setShowDeleteDialog(false);
+      setSelectedIndex(0);
+    }
   }
 
   function renderActionButtons() {
@@ -1594,7 +1641,11 @@ function Editor({
           <Plus className="h-4 w-4" />
           Novo
         </IconButton>
-        <IconButton onClick={openDeleteDialog} variant="danger" disabled={!hasSelection || isSaving}>
+        <IconButton
+          onClick={openDeleteDialog}
+          variant="danger"
+          disabled={!hasSelection || isSaving}
+        >
           <Trash2 className="h-4 w-4" />
           Remover
         </IconButton>
@@ -1712,6 +1763,7 @@ function Editor({
           onChange={setNewItemName}
           onCancel={() => setShowNewDialog(false)}
           onConfirm={addItem}
+          message={savedMessage}
           busy={isSaving}
         />
       )}
@@ -1720,6 +1772,7 @@ function Editor({
           itemLabel={getItemLabel(section, activeItem, selectedIndex)}
           onCancel={() => setShowDeleteDialog(false)}
           onConfirm={deleteItem}
+          message={savedMessage}
           busy={isSaving}
         />
       )}
