@@ -267,32 +267,69 @@ function LinesField({
   );
 }
 
+type SelectOption = string | { value: string; label: string };
+
 function SelectField({
   label,
   value,
   onChange,
   options,
+  emptyOption,
 }: {
   label: string;
   value: unknown;
   onChange: (value: string) => void;
-  options: string[];
+  options: SelectOption[];
+  emptyOption?: { value: string; label: string };
 }) {
+  const [open, setOpen] = useState(false);
+  const entries =
+    options.length > 0
+      ? options.map((option) =>
+          typeof option === "string" ? { value: option, label: option } : option,
+        )
+      : emptyOption
+        ? [emptyOption]
+        : [];
+  const stringValue = String(value ?? entries[0]?.value ?? "");
+  const selectedLabel =
+    entries.find((option) => option.value === stringValue)?.label ?? entries[0]?.label ?? "";
+
+  function choose(nextValue: string) {
+    onChange(nextValue);
+    setOpen(false);
+  }
+
   return (
-    <label className="block">
+    <div className="relative">
       <span className="text-xs uppercase tracking-[0.22em] text-[var(--gold)]/80">{label}</span>
-      <select
-        value={String(value ?? options[0])}
-        onChange={(event) => onChange(event.target.value)}
-        className="mt-2 h-11 w-full appearance-none rounded-sm border border-border bg-background/70 px-3 text-sm text-foreground outline-none transition-colors focus:border-[var(--gold)]/70"
+      <button
+        type="button"
+        onClick={() => setOpen((current) => !current)}
+        className="mt-2 flex h-11 w-full items-center justify-between rounded-sm border border-border bg-background/70 px-3 text-left text-sm text-foreground outline-none transition-colors hover:border-[var(--gold)]/40 focus:border-[var(--gold)]/70"
       >
-        {options.map((option) => (
-          <option key={option} value={option}>
-            {option}
-          </option>
-        ))}
-      </select>
-    </label>
+        <span className="truncate">{selectedLabel}</span>
+        <span className="ml-3 text-[var(--gold)]/70">▾</span>
+      </button>
+      {open && (
+        <div className="absolute z-40 mt-1 max-h-64 w-full overflow-y-auto rounded-sm border border-[var(--gold)]/50 bg-background shadow-[0_16px_44px_oklch(0.08_0.01_95_/_0.45)]">
+          {entries.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => choose(option.value)}
+              className={`block w-full px-3 py-2 text-left text-sm transition-colors ${
+                option.value === stringValue
+                  ? "bg-[var(--gold)]/18 text-[var(--gold)]"
+                  : "text-foreground hover:bg-[var(--gold)]/10"
+              }`}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -1519,26 +1556,16 @@ function Editor({
           </div>
 
           <div className="mb-6 grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,280px)_1fr]">
-            <label className="block">
-              <span className="text-xs uppercase tracking-[0.22em] text-[var(--gold)]/80">
-                Registro
-              </span>
-              <select
-                value={items.length === 0 ? "__create__" : selectedIndex}
-                onChange={(event) => handleRecordSelect(event.target.value)}
-                className="mt-2 h-11 w-full appearance-none rounded-sm border border-border bg-background/70 px-3 text-sm text-foreground outline-none transition-colors focus:border-[var(--gold)]/70"
-              >
-                {items.length === 0 ? (
-                  <option value="__create__">Criar novo</option>
-                ) : (
-                  items.map((item, index) => (
-                    <option key={`${section}-${index}`} value={index}>
-                      {getItemLabel(section, item, index)}
-                    </option>
-                  ))
-                )}
-              </select>
-            </label>
+            <SelectField
+              label="Registro"
+              value={items.length === 0 ? "__create__" : String(selectedIndex)}
+              onChange={handleRecordSelect}
+              options={items.map((item, index) => ({
+                value: String(index),
+                label: getItemLabel(section, item, index),
+              }))}
+              emptyOption={{ value: "__create__", label: "Criar novo" }}
+            />
             <div className="rounded border border-border/70 bg-background/35 p-3 text-sm text-muted-foreground">
               {items.length === 0 ? (
                 "Nenhum registro nesta seção. Selecione Criar novo ou use o botão Novo."
