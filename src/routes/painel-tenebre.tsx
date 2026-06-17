@@ -39,6 +39,7 @@ const buttonBase =
   "inline-flex h-10 items-center justify-center gap-2 rounded-sm border px-3 text-sm font-medium tracking-wide transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--gold)]/55 disabled:cursor-not-allowed disabled:opacity-45";
 const defaultArchiveTypes = ["Carta", "Mapa", "Imagem", "Documento", "Handout"];
 const otherArchiveTypeValue = "__other_archive_type__";
+const editorStateStorageKey = "tenebre-admin-editor-state";
 
 const sections: {
   key: SectionKey;
@@ -84,6 +85,56 @@ function getSectionSingularLabel(section: SectionKey) {
   if (section === "npcs") return "NPC";
   if (section === "archive") return "Documento";
   return "Nota";
+}
+
+function isSectionKey(value: unknown): value is SectionKey {
+  return typeof value === "string" && sections.some((entry) => entry.key === value);
+}
+
+function getItemStorageKey(section: SectionKey, item: DraftItem | undefined, index: number) {
+  if (!item) return "";
+  if (section === "masterNotes") return `index:${index}`;
+  const slug = item.slug;
+  if (typeof slug === "string" && slug.length > 0) return `slug:${slug}`;
+  return `index:${index}`;
+}
+
+function findStoredItemIndex(items: DraftItem[], itemKey: unknown, fallbackIndex: unknown) {
+  if (typeof itemKey === "string" && itemKey.startsWith("slug:")) {
+    const slug = itemKey.slice("slug:".length);
+    const foundIndex = items.findIndex((item) => item.slug === slug);
+    if (foundIndex >= 0) return foundIndex;
+  }
+
+  const index =
+    typeof fallbackIndex === "number" && Number.isFinite(fallbackIndex)
+      ? fallbackIndex
+      : typeof itemKey === "string" && itemKey.startsWith("index:")
+        ? Number(itemKey.slice("index:".length))
+        : 0;
+
+  if (items.length === 0) return 0;
+  return Math.max(0, Math.min(Math.trunc(index), items.length - 1));
+}
+
+function readStoredEditorState(content: CampaignContent) {
+  if (typeof window === "undefined") return { section: "sessions" as SectionKey, index: 0 };
+
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(editorStateStorageKey) ?? "{}") as {
+      section?: unknown;
+      itemKey?: unknown;
+      index?: unknown;
+    };
+    const nextSection = isSectionKey(parsed.section) ? parsed.section : "sessions";
+    const items = getCollection(content, nextSection);
+    return {
+      section: nextSection,
+      index: findStoredItemIndex(items, parsed.itemKey, parsed.index),
+    };
+  } catch {
+    return { section: "sessions" as SectionKey, index: 0 };
+  }
 }
 
 function createItem(section: SectionKey, content: CampaignContent): DraftItem {
@@ -627,16 +678,18 @@ function NewItemDialog({
   onChange,
   onCancel,
   onConfirm,
+  busy = false,
 }: {
   sectionLabel: string;
   value: string;
   onChange: (value: string) => void;
   onCancel: () => void;
-  onConfirm: () => void;
+  onConfirm: () => void | Promise<void>;
+  busy?: boolean;
 }) {
   function submit(event: FormEvent) {
     event.preventDefault();
-    onConfirm();
+    void onConfirm();
   }
 
   return (
@@ -647,11 +700,11 @@ function NewItemDialog({
       <form onSubmit={submit} className="space-y-4">
         <Field label="Nome" value={value} onChange={onChange} />
         <div className="flex flex-wrap justify-end gap-2">
-          <IconButton onClick={onCancel} variant="quiet">
+          <IconButton onClick={onCancel} variant="quiet" disabled={busy}>
             Cancelar
           </IconButton>
-          <IconButton type="submit" disabled={!value.trim()}>
-            Criar
+          <IconButton type="submit" disabled={!value.trim() || busy}>
+            {busy ? "Criando..." : "Criar"}
           </IconButton>
         </div>
       </form>
@@ -663,10 +716,12 @@ function ConfirmDeleteDialog({
   itemLabel,
   onCancel,
   onConfirm,
+  busy = false,
 }: {
   itemLabel: string;
   onCancel: () => void;
-  onConfirm: () => void;
+  onConfirm: () => void | Promise<void>;
+  busy?: boolean;
 }) {
   return (
     <DialogFrame
@@ -674,11 +729,11 @@ function ConfirmDeleteDialog({
       description={`Confirme a remoção de "${itemLabel}". Esta ação será salva imediatamente.`}
     >
       <div className="flex flex-wrap justify-end gap-2">
-        <IconButton onClick={onCancel} variant="quiet">
+        <IconButton onClick={onCancel} variant="quiet" disabled={busy}>
           Cancelar
         </IconButton>
-        <IconButton onClick={onConfirm} variant="danger">
-          Remover
+        <IconButton onClick={() => void onConfirm()} variant="danger" disabled={busy}>
+          {busy ? "Removendo..." : "Remover"}
         </IconButton>
       </div>
     </DialogFrame>
@@ -1293,8 +1348,8 @@ function Editor({
   const saveContentFn = useServerFn(saveCampaignContent);
   const uploadImageFn = useServerFn(uploadCharacterImage);
   const [content, setContent] = useState<CampaignContent>(() => cloneContent(initialContent));
-  const [section, setSection] = useState<SectionKey>("sessions");
-  const [selectedIndex, setSelectedIndex] = useState(0);
+  const [section, setSection] = useState<SectionKey>(() => readStoredEditorState(initialContent).section);
+  const [selectedIndex, setSelectedIndex] = useState(() => readStoredEditorState(initialContent).index);
   const [draft, setDraft] = useState<DraftItem>(
     () => cloneContent(defaultCampaignContent).sessions[0] as DraftItem,
   );
@@ -1331,6 +1386,20 @@ function Editor({
     setContentRevision(0);
     setSavedRevision(0);
   }, [initialContent]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const currentItems = getCollection(content, section);
+    window.localStorage.setItem(
+      editorStateStorageKey,
+      JSON.stringify({
+        section,
+        index: selectedIndex,
+        itemKey: getItemStorageKey(section, currentItems[selectedIndex], selectedIndex),
+      }),
+    );
+  }, [content, section, selectedIndex]);
 
   useEffect(() => {
     const currentItems = getCollection(content, section);
@@ -1481,19 +1550,17 @@ function Editor({
     return { ...item, title: cleanName };
   }
 
-  function addItem() {
+  async function addItem() {
     const itemName = newItemName.trim();
-    if (!itemName) return;
+    if (!itemName || isSaving) return;
 
     const newItem = applyNameToItem(createItem(section, content), itemName);
     const next = cloneContent(content) as unknown as Record<SectionKey, DraftItem[]>;
     next[section] = [newItem, ...next[section]];
-    setContent(next as unknown as CampaignContent);
-    setDraft(newItem);
     setSelectedIndex(0);
+    setDraft(newItem);
+    await persistContent(next as unknown as CampaignContent, "Novo registro criado.");
     setShowNewDialog(false);
-    markContentDirty();
-    setSavedMessage("Novo registro criado. Salve para publicar.");
   }
 
   async function saveItem() {
@@ -1645,6 +1712,7 @@ function Editor({
           onChange={setNewItemName}
           onCancel={() => setShowNewDialog(false)}
           onConfirm={addItem}
+          busy={isSaving}
         />
       )}
       {showDeleteDialog && activeItem && (
@@ -1652,6 +1720,7 @@ function Editor({
           itemLabel={getItemLabel(section, activeItem, selectedIndex)}
           onCancel={() => setShowDeleteDialog(false)}
           onConfirm={deleteItem}
+          busy={isSaving}
         />
       )}
       {discardAction && (
