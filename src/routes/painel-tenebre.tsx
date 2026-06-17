@@ -35,6 +35,9 @@ import {
 type SectionKey = keyof CampaignContent;
 type DraftItem = Record<string, unknown>;
 
+const buttonBase =
+  "inline-flex h-10 items-center justify-center gap-2 rounded-sm border px-3 text-sm font-medium tracking-wide transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--gold)]/55 disabled:cursor-not-allowed disabled:opacity-45";
+
 const sections: {
   key: SectionKey;
   label: string;
@@ -180,7 +183,7 @@ function Field({
       <input
         value={String(value ?? "")}
         onChange={(event) => onChange(event.target.value)}
-        className="mt-2 h-11 w-full rounded border border-border bg-background/70 px-3 text-sm text-foreground outline-none transition-colors focus:border-[var(--gold)]/70"
+        className="mt-2 h-11 w-full appearance-none rounded-sm border border-border bg-background/70 px-3 text-sm text-foreground outline-none transition-colors focus:border-[var(--gold)]/70"
       />
       {help && <span className="mt-1 block text-xs text-muted-foreground">{help}</span>}
     </label>
@@ -203,7 +206,7 @@ function NumberField({
         type="number"
         value={Number(value ?? 0)}
         onChange={(event) => onChange(Number(event.target.value))}
-        className="mt-2 h-11 w-full rounded border border-border bg-background/70 px-3 text-sm text-foreground outline-none transition-colors focus:border-[var(--gold)]/70"
+        className="mt-2 h-11 w-full appearance-none rounded-sm border border-border bg-background/70 px-3 text-sm text-foreground outline-none transition-colors focus:border-[var(--gold)]/70"
       />
     </label>
   );
@@ -229,7 +232,7 @@ function TextAreaField({
         rows={rows}
         value={String(value ?? "")}
         onChange={(event) => onChange(event.target.value)}
-        className="mt-2 w-full resize-y rounded border border-border bg-background/70 px-3 py-3 text-sm leading-relaxed text-foreground outline-none transition-colors focus:border-[var(--gold)]/70"
+        className="mt-2 w-full resize-y appearance-none rounded-sm border border-border bg-background/70 px-3 py-3 text-sm leading-relaxed text-foreground outline-none transition-colors focus:border-[var(--gold)]/70"
       />
       {help && <span className="mt-1 block text-xs text-muted-foreground">{help}</span>}
     </label>
@@ -273,7 +276,7 @@ function SelectField({
       <select
         value={String(value ?? options[0])}
         onChange={(event) => onChange(event.target.value)}
-        className="mt-2 h-11 w-full rounded border border-border bg-background/70 px-3 text-sm text-foreground outline-none transition-colors focus:border-[var(--gold)]/70"
+        className="mt-2 h-11 w-full appearance-none rounded-sm border border-border bg-background/70 px-3 text-sm text-foreground outline-none transition-colors focus:border-[var(--gold)]/70"
       >
         {options.map((option) => (
           <option key={option} value={option}>
@@ -417,7 +420,9 @@ function ImagePathField({
         <Field label={label} value={value} onChange={onChange} help={help} />
         {onUpload && (
           <div className="mt-3 flex flex-wrap items-center gap-3">
-            <label className="inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded border border-border px-3 text-sm text-foreground transition-colors hover:border-[var(--gold)]/40">
+            <label
+              className={`${buttonBase} cursor-pointer border-border/80 bg-background/55 text-foreground hover:border-[var(--gold)]/50 hover:bg-[var(--gold)]/10`}
+            >
               <Upload className="h-4 w-4" />
               {uploading ? "Enviando..." : "Arquivo local"}
               <input
@@ -438,12 +443,12 @@ function ImagePathField({
               type="button"
               onClick={() => void pasteFromClipboard()}
               disabled={uploading}
-              className="inline-flex h-10 items-center justify-center gap-2 rounded border border-border px-3 text-sm text-foreground transition-colors hover:border-[var(--gold)]/40 disabled:cursor-not-allowed disabled:opacity-45"
+              className={`${buttonBase} border-border/80 bg-background/55 text-foreground hover:border-[var(--gold)]/50 hover:bg-[var(--gold)]/10`}
             >
               <ClipboardPaste className="h-4 w-4" />
               Colar
             </button>
-            <span className="inline-flex h-10 items-center gap-2 rounded border border-border/70 px-3 text-sm text-muted-foreground">
+            <span className="inline-flex h-10 items-center gap-2 rounded-sm border border-border/70 bg-background/35 px-3 text-sm text-muted-foreground">
               <LinkIcon className="h-4 w-4" />
               Link
             </span>
@@ -512,9 +517,12 @@ function IconButton({
   disabled?: boolean;
 }) {
   const styles = {
-    default: "border-[var(--gold)]/50 text-[var(--gold)] hover:bg-[var(--gold)]/10",
-    danger: "border-[var(--blood)]/50 text-[oklch(0.75_0.12_25)] hover:bg-[var(--blood)]/10",
-    quiet: "border-border text-foreground hover:border-[var(--gold)]/40",
+    default:
+      "border-[var(--gold)]/60 bg-[var(--gold)]/10 text-[var(--gold)] hover:bg-[var(--gold)]/20 hover:border-[var(--gold)]/80",
+    danger:
+      "border-[var(--blood)]/60 bg-[var(--blood)]/10 text-[oklch(0.78_0.13_25)] hover:bg-[var(--blood)]/20 hover:border-[var(--blood)]/80",
+    quiet:
+      "border-border/80 bg-background/55 text-foreground hover:border-[var(--gold)]/50 hover:bg-[var(--gold)]/10",
   };
 
   return (
@@ -522,7 +530,7 @@ function IconButton({
       type={type}
       onClick={onClick}
       disabled={disabled}
-      className={`inline-flex h-10 items-center justify-center gap-2 rounded border px-3 text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-45 ${styles[variant]}`}
+      className={`${buttonBase} ${styles[variant]}`}
     >
       {children}
     </button>
@@ -632,7 +640,7 @@ function AuthPanel({
                 <button
                   type="button"
                   onClick={() => setMode(mode === "login" ? "register" : "login")}
-                  className="shrink-0 text-sm text-[var(--gold)] hover:underline"
+                  className={`${buttonBase} h-9 shrink-0 border-border/80 bg-background/55 text-[var(--gold)] hover:border-[var(--gold)]/50 hover:bg-[var(--gold)]/10`}
                 >
                   {mode === "login" ? "Registrar novo usuário" : "Voltar ao login"}
                 </button>
@@ -649,7 +657,7 @@ function AuthPanel({
                   type="password"
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
-                  className="mt-2 h-11 w-full rounded border border-border bg-background/70 px-3 text-sm text-foreground outline-none transition-colors focus:border-[var(--gold)]/70"
+                  className="mt-2 h-11 w-full appearance-none rounded-sm border border-border bg-background/70 px-3 text-sm text-foreground outline-none transition-colors focus:border-[var(--gold)]/70"
                 />
               </label>
 
@@ -1240,10 +1248,10 @@ function Editor({
               key={entry.key}
               type="button"
               onClick={() => selectSection(entry.key)}
-              className={`w-full rounded border p-4 text-left transition-colors ${
+              className={`w-full appearance-none rounded-sm border p-4 text-left transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--gold)]/55 ${
                 section === entry.key
-                  ? "border-[var(--gold)]/50 bg-[var(--gold)]/10"
-                  : "border-border/70 hover:border-[var(--gold)]/40"
+                  ? "border-[var(--gold)]/60 bg-[var(--gold)]/10"
+                  : "border-border/70 bg-background/35 hover:border-[var(--gold)]/40 hover:bg-[var(--gold)]/5"
               }`}
             >
               <span className="font-display text-xl text-foreground">{entry.label}</span>
@@ -1281,7 +1289,7 @@ function Editor({
               <select
                 value={selectedIndex}
                 onChange={(event) => selectItem(Number(event.target.value))}
-                className="mt-2 h-11 w-full rounded border border-border bg-background/70 px-3 text-sm text-foreground outline-none transition-colors focus:border-[var(--gold)]/70"
+                className="mt-2 h-11 w-full appearance-none rounded-sm border border-border bg-background/70 px-3 text-sm text-foreground outline-none transition-colors focus:border-[var(--gold)]/70"
               >
                 {items.map((item, index) => (
                   <option key={`${section}-${index}`} value={index}>
@@ -1310,14 +1318,6 @@ function Editor({
           )}
 
           {savedMessage && <p className="mt-4 text-sm text-[var(--gold)]">{savedMessage}</p>}
-          <div className="sticky bottom-0 z-10 -mx-5 mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-border/70 bg-background/95 px-5 py-4 backdrop-blur">
-            <p className="text-sm text-muted-foreground">
-              {hasUnsavedChanges
-                ? "Revise e salve antes de sair deste registro."
-                : savedMessage || "Nenhuma alteração pendente."}
-            </p>
-            <div className="flex flex-wrap gap-2">{renderActionButtons()}</div>
-          </div>
         </ChronicleCard>
       </div>
 
