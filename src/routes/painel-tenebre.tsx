@@ -458,6 +458,12 @@ function ImagePathField({
     }
   }
 
+  function removeImage() {
+    onChange("");
+    setPreviewFailed(false);
+    setUploadMessage("Imagem removida.");
+  }
+
   return (
     <div
       className="grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,1fr)_150px]"
@@ -495,6 +501,17 @@ function ImagePathField({
               <ClipboardPaste className="h-4 w-4" />
               Colar
             </button>
+            {path && (
+              <button
+                type="button"
+                onClick={removeImage}
+                disabled={uploading}
+                className={`${buttonBase} border-[var(--blood)]/60 bg-[var(--blood)]/10 text-[oklch(0.78_0.13_25)] hover:border-[var(--blood)]/80 hover:bg-[var(--blood)]/20`}
+              >
+                <Trash2 className="h-4 w-4" />
+                Remover imagem
+              </button>
+            )}
             <span className="inline-flex h-10 items-center gap-2 rounded-sm border border-border/70 bg-background/35 px-3 text-sm text-muted-foreground">
               <LinkIcon className="h-4 w-4" />
               Link
