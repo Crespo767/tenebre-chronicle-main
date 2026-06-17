@@ -2,8 +2,10 @@ import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import {
   AlertTriangle,
+  ClipboardPaste,
   Download,
   Image,
+  Link as LinkIcon,
   LogOut,
   Plus,
   RotateCcw,
@@ -11,7 +13,7 @@ import {
   Trash2,
   Upload,
 } from "lucide-react";
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type ClipboardEvent, type FormEvent } from "react";
 
 import { PageContainer, SectionTitle, ChronicleCard, StatusBadge } from "../components/ui-chrome";
 import {
@@ -124,6 +126,7 @@ function createItem(section: SectionKey, content: CampaignContent): DraftItem {
         content.npcs.map((npc) => npc.slug),
       ),
       name: "Novo NPC",
+      image: "",
       role: "",
       location: "",
       relation: "",
@@ -312,36 +315,115 @@ function ImagePathField({
   value,
   onChange,
   onUpload,
+  label = "Imagem",
+  help = "Use uma URL https, um caminho em /images/ ou envie uma imagem.",
+  previewAlt = "Prévia da imagem",
+  emptyLabel = "Sem imagem",
+  ratio = "3/4",
 }: {
   value: unknown;
   onChange: (value: string) => void;
   onUpload?: (file: File) => Promise<string>;
+  label?: string;
+  help?: string;
+  previewAlt?: string;
+  emptyLabel?: string;
+  ratio?: string;
 }) {
   const path = String(value ?? "").trim();
   const [previewFailed, setPreviewFailed] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadMessage, setUploadMessage] = useState("");
-  const isValidPath =
-    !path || path.startsWith("/images/characters/") || path.startsWith("https://");
+  const isValidPath = !path || path.startsWith("/images/") || path.startsWith("https://");
 
   useEffect(() => {
     setPreviewFailed(false);
   }, [path]);
 
+  async function uploadFile(file: File) {
+    if (!onUpload) return;
+    if (!isSupportedImageFile(file)) {
+      setUploadMessage("Formato de imagem não aceito.");
+      return;
+    }
+
+    setUploading(true);
+    setUploadMessage("");
+    try {
+      const url = await onUpload(file);
+      onChange(url);
+      setUploadMessage("Imagem enviada.");
+    } catch (error) {
+      setUploadMessage(error instanceof Error ? error.message : "Falha ao enviar imagem.");
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  function handlePaste(event: ClipboardEvent<HTMLElement>) {
+    const file = Array.from(event.clipboardData.files).find(isSupportedImageFile);
+    if (file) {
+      event.preventDefault();
+      void uploadFile(file);
+      return;
+    }
+
+    const text = event.clipboardData.getData("text").trim();
+    if (text && (text.startsWith("https://") || text.startsWith("/images/"))) {
+      event.preventDefault();
+      onChange(text);
+      setUploadMessage("Link colado.");
+    }
+  }
+
+  async function pasteFromClipboard() {
+    if (!navigator.clipboard) {
+      setUploadMessage("Área de transferência indisponível.");
+      return;
+    }
+
+    const clipboard = navigator.clipboard as Clipboard & {
+      read?: () => Promise<Array<{ types: string[]; getType: (type: string) => Promise<Blob> }>>;
+    };
+
+    try {
+      if (clipboard.read && onUpload) {
+        const items = await clipboard.read();
+        for (const item of items) {
+          const type = item.types.find((itemType) => itemType.startsWith("image/"));
+          if (!type) continue;
+
+          const blob = await item.getType(type);
+          await uploadFile(new File([blob], `imagem-colada.${mimeExtension(type)}`, { type }));
+          return;
+        }
+      }
+
+      const text = (await navigator.clipboard.readText()).trim();
+      if (text) {
+        onChange(text);
+        setUploadMessage("Link colado.");
+        return;
+      }
+
+      setUploadMessage("Nada para colar.");
+    } catch {
+      setUploadMessage("Não foi possível ler a área de transferência.");
+    }
+  }
+
   return (
-    <div className="grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,1fr)_150px]">
+    <div
+      className="grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,1fr)_150px]"
+      onPaste={handlePaste}
+    >
       <div>
-        <Field
-          label="Imagem"
-          value={value}
-          onChange={onChange}
-          help="Use /images/characters/nome-do-personagem.webp, uma URL https ou envie um arquivo."
-        />
+        <Field label={label} value={value} onChange={onChange} help={help} />
         {onUpload && (
           <div className="mt-3 flex flex-wrap items-center gap-3">
             <label className="inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded border border-border px-3 text-sm text-foreground transition-colors hover:border-[var(--gold)]/40">
               <Upload className="h-4 w-4" />
-              {uploading ? "Enviando..." : "Enviar imagem"}
+              {uploading ? "Enviando..." : "Arquivo local"}
               <input
                 type="file"
                 accept="image/png,image/jpeg,image/webp,image/gif"
@@ -352,22 +434,23 @@ function ImagePathField({
                   event.currentTarget.value = "";
                   if (!file) return;
 
-                  setUploading(true);
-                  setUploadMessage("");
-                  try {
-                    const url = await onUpload(file);
-                    onChange(url);
-                    setUploadMessage("Imagem enviada.");
-                  } catch (error) {
-                    setUploadMessage(
-                      error instanceof Error ? error.message : "Falha ao enviar imagem.",
-                    );
-                  } finally {
-                    setUploading(false);
-                  }
+                  await uploadFile(file);
                 }}
               />
             </label>
+            <button
+              type="button"
+              onClick={() => void pasteFromClipboard()}
+              disabled={uploading}
+              className="inline-flex h-10 items-center justify-center gap-2 rounded border border-border px-3 text-sm text-foreground transition-colors hover:border-[var(--gold)]/40 disabled:cursor-not-allowed disabled:opacity-45"
+            >
+              <ClipboardPaste className="h-4 w-4" />
+              Colar
+            </button>
+            <span className="inline-flex h-10 items-center gap-2 rounded border border-border/70 px-3 text-sm text-muted-foreground">
+              <LinkIcon className="h-4 w-4" />
+              Link
+            </span>
             {uploadMessage && <p className="text-sm text-muted-foreground">{uploadMessage}</p>}
           </div>
         )}
@@ -376,17 +459,21 @@ function ImagePathField({
         {path && !previewFailed ? (
           <img
             src={path}
-            alt="Prévia da imagem do personagem"
+            alt={previewAlt}
             className="aspect-[3/4] w-full object-cover"
+            style={{ aspectRatio: ratio }}
             onError={(event) => {
               event.currentTarget.style.display = "none";
               setPreviewFailed(true);
             }}
           />
         ) : (
-          <div className="flex aspect-[3/4] flex-col items-center justify-center gap-2 px-3 text-center text-xs text-muted-foreground">
+          <div
+            className="flex aspect-[3/4] flex-col items-center justify-center gap-2 px-3 text-center text-xs text-muted-foreground"
+            style={{ aspectRatio: ratio }}
+          >
             <Image className="h-5 w-5 text-[var(--gold)]/70" />
-            {path ? "Imagem não encontrada" : "Sem imagem"}
+            {path ? "Imagem não encontrada" : emptyLabel}
           </div>
         )}
       </div>
@@ -395,11 +482,24 @@ function ImagePathField({
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
           {previewFailed
             ? "Não foi possível carregar a prévia. Verifique se o arquivo existe no caminho informado."
-            : "Prefira imagens dentro de /images/characters/ para manter o site simples e portável."}
+            : "Use um caminho em /images/ ou uma URL https."}
         </p>
       )}
     </div>
   );
+}
+
+function isSupportedImageFile(file: File) {
+  return ["image/png", "image/jpeg", "image/webp", "image/gif"].includes(file.type);
+}
+
+function mimeExtension(mimeType: string) {
+  if (mimeType === "image/jpeg") return "jpg";
+  return mimeType.split("/")[1] || "webp";
+}
+
+function isImageArchiveType(value: unknown) {
+  return value === "Imagem" || value === "Mapa" || value === "Handout";
 }
 
 function IconButton({
@@ -705,14 +805,12 @@ function SectionForm({
           </div>
         </FormSection>
 
-        <FormSection
-          title="Imagem"
-          description="Use arquivos em public/images/characters para manter o deploy simples."
-        >
+        <FormSection title="Imagem" description="Retrato público do personagem.">
           <ImagePathField
             value={draft.image}
             onChange={(value) => setField("image", value)}
             onUpload={uploadImage}
+            previewAlt="Prévia da imagem do personagem"
           />
         </FormSection>
 
@@ -811,6 +909,15 @@ function SectionForm({
           </div>
         </FormSection>
 
+        <FormSection title="Imagem" description="Retrato público do NPC.">
+          <ImagePathField
+            value={draft.image}
+            onChange={(value) => setField("image", value)}
+            onUpload={uploadImage}
+            previewAlt="Prévia da imagem do NPC"
+          />
+        </FormSection>
+
         <FormSection title="Resumo">
           <TextAreaField
             label="Resumo"
@@ -857,11 +964,23 @@ function SectionForm({
               value={draft.description}
               onChange={(value) => setField("description", value)}
             />
-            <Field
-              label="Link externo"
-              value={draft.link}
-              onChange={(value) => setField("link", value)}
-            />
+            {isImageArchiveType(draft.type) ? (
+              <ImagePathField
+                label="Imagem do arquivo"
+                value={draft.link}
+                onChange={(value) => setField("link", value)}
+                onUpload={uploadImage}
+                previewAlt="Prévia da imagem do arquivo"
+                emptyLabel="Sem arquivo"
+                ratio="16/10"
+              />
+            ) : (
+              <Field
+                label="Link externo"
+                value={draft.link}
+                onChange={(value) => setField("link", value)}
+              />
+            )}
           </div>
         </FormSection>
       </div>

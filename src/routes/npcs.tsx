@@ -1,5 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { PageContainer, SectionTitle, ChronicleCard, StatusBadge } from "../components/ui-chrome";
+import {
+  PageContainer,
+  SectionTitle,
+  ChronicleCard,
+  StatusBadge,
+  ImageFrame,
+} from "../components/ui-chrome";
 import { getCampaignContent } from "../lib/api/campaign.functions";
 
 export const Route = createFileRoute("/npcs")({
@@ -36,6 +42,7 @@ function NpcsPage() {
         {npcs.map((n) => (
           <li key={n.slug}>
             <ChronicleCard as="article" className="h-full">
+              {n.image && <ImageFrame src={n.image} alt={n.name} ratio="3/4" className="mb-4" />}
               <div className="flex items-start justify-between gap-3">
                 <h2 className="font-display text-xl text-foreground">{n.name}</h2>
                 <StatusBadge tone={tone(n.status)}>{n.status}</StatusBadge>

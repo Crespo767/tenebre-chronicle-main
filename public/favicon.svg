@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Tenebre">
+  <defs>
+    <radialGradient id="bg" cx="38%" cy="28%" r="78%">
+      <stop offset="0" stop-color="#34301f"/>
+      <stop offset="0.5" stop-color="#1f2118"/>
+      <stop offset="1" stop-color="#11100d"/>
+    </radialGradient>
+    <linearGradient id="gold" x1="168" x2="344" y1="88" y2="424">
+      <stop offset="0" stop-color="#f0ce72"/>
+      <stop offset="0.58" stop-color="#b88b36"/>
+      <stop offset="1" stop-color="#705018"/>
+    </linearGradient>
+    <linearGradient id="blood" x1="192" x2="320" y1="176" y2="388">
+      <stop offset="0" stop-color="#6f211d"/>
+      <stop offset="1" stop-color="#2b0c0b"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="96" fill="url(#bg)"/>
+  <path d="M70 374c46-26 72-95 117-70 29 16 47 67 87 51 41-17 53-94 102-101 24-4 44 9 66 28v160H70z" fill="#151b13"/>
+  <circle cx="256" cy="230" r="128" fill="none" stroke="url(#gold)" stroke-width="31"/>
+  <circle cx="256" cy="230" r="73" fill="url(#blood)" stroke="#d6ad55" stroke-width="18"/>
+  <path d="M256 68v104M256 288v156M94 230h98M320 230h98M143 117l70 70M299 273l80 80M369 117l-70 70M213 273l-80 80" stroke="url(#gold)" stroke-width="22" stroke-linecap="round"/>
+  <path d="M256 126l29 95-29 103-29-103z" fill="#f1d27d"/>
+  <path d="M256 142l-18 80 18 58z" fill="#fff0a8" opacity="0.82"/>
+  <path d="M256 126l29 95-29 103z" fill="#7f5b1d" opacity="0.92"/>
+  <path d="M171 414h170" stroke="#cda24d" stroke-width="20" stroke-linecap="round"/>
+</svg>

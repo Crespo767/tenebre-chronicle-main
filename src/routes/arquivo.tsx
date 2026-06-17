@@ -1,5 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { PageContainer, SectionTitle, ChronicleCard, StatusBadge } from "../components/ui-chrome";
+import {
+  PageContainer,
+  SectionTitle,
+  ChronicleCard,
+  StatusBadge,
+  ImageFrame,
+} from "../components/ui-chrome";
 import { getCampaignContent } from "../lib/api/campaign.functions";
 
 export const Route = createFileRoute("/arquivo")({
@@ -29,6 +35,9 @@ function ArchivePage() {
         {archive.map((it) => (
           <li key={it.slug}>
             <ChronicleCard as="article" className="h-full">
+              {it.link && isImageLikeArchiveItem(it.type, it.link) && (
+                <ImageFrame src={it.link} alt={it.title} ratio="16/10" className="mb-4" />
+              )}
               <div className="flex items-start justify-between gap-3">
                 <h2 className="font-display text-xl text-foreground">{it.title}</h2>
                 <StatusBadge tone="warn">{it.type}</StatusBadge>
@@ -52,5 +61,11 @@ function ArchivePage() {
         ))}
       </ul>
     </PageContainer>
+  );
+}
+
+function isImageLikeArchiveItem(type: string, link: string) {
+  return (
+    type === "Imagem" || type === "Mapa" || /\.(avif|gif|jpe?g|png|svg|webp)(\?.*)?$/i.test(link)
   );
 }

@@ -42,26 +42,26 @@
   /* Dark fantasy palette */
   --background: oklch(0.16 0.012 95);
   --foreground: oklch(0.86 0.025 85);
-  --card: oklch(0.20 0.014 95);
+  --card: oklch(0.2 0.014 95);
   --card-foreground: oklch(0.88 0.025 85);
   --popover: oklch(0.18 0.012 95);
   --popover-foreground: oklch(0.88 0.025 85);
-  --primary: oklch(0.68 0.10 80);          /* dourado envelhecido */
+  --primary: oklch(0.68 0.1 80); /* dourado envelhecido */
   --primary-foreground: oklch(0.15 0.012 95);
-  --secondary: oklch(0.28 0.022 140);      /* verde escuro */
+  --secondary: oklch(0.28 0.022 140); /* verde escuro */
   --secondary-foreground: oklch(0.88 0.025 85);
-  --muted: oklch(0.24 0.010 95);
+  --muted: oklch(0.24 0.01 95);
   --muted-foreground: oklch(0.62 0.018 85);
-  --accent: oklch(0.32 0.030 140);
+  --accent: oklch(0.32 0.03 140);
   --accent-foreground: oklch(0.92 0.025 85);
-  --destructive: oklch(0.45 0.13 25);      /* vermelho escuro */
+  --destructive: oklch(0.45 0.13 25); /* vermelho escuro */
   --destructive-foreground: oklch(0.95 0.02 85);
-  --border: oklch(0.30 0.020 90);
+  --border: oklch(0.3 0.02 90);
   --input: oklch(0.24 0.014 95);
   --ring: oklch(0.55 0.08 80);
 
-  --gold: oklch(0.68 0.10 80);
-  --moss: oklch(0.32 0.040 140);
+  --gold: oklch(0.68 0.1 80);
+  --moss: oklch(0.32 0.04 140);
   --leather: oklch(0.35 0.045 55);
   --blood: oklch(0.42 0.14 25);
   --parchment: oklch(0.85 0.04 85);
@@ -73,8 +73,12 @@
 }
 
 @layer base {
-  * { border-color: var(--color-border); }
-  html { color-scheme: dark; }
+  * {
+    border-color: var(--color-border);
+  }
+  html {
+    color-scheme: dark;
+  }
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
@@ -85,26 +89,46 @@
     background-attachment: fixed;
     min-height: 100vh;
   }
-  h1, h2, h3, h4 {
+  h1,
+  h2,
+  h3,
+  h4 {
     font-family: var(--font-display);
     letter-spacing: 0.01em;
   }
-  ::selection { background: var(--gold); color: var(--background); }
+  input[type="number"] {
+    appearance: textfield;
+    -moz-appearance: textfield;
+  }
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button {
+    margin: 0;
+    -webkit-appearance: none;
+  }
+  ::selection {
+    background: var(--gold);
+    color: var(--background);
+  }
 }
 
 @utility chronicle-card {
-  background: linear-gradient(180deg,
+  background: linear-gradient(
+    180deg,
     color-mix(in oklab, var(--card) 92%, transparent),
-    color-mix(in oklab, var(--card) 78%, transparent));
+    color-mix(in oklab, var(--card) 78%, transparent)
+  );
   border: 1px solid color-mix(in oklab, var(--gold) 22%, var(--border));
   border-radius: var(--radius);
-  transition: border-color 200ms ease, box-shadow 200ms ease;
+  transition:
+    border-color 200ms ease,
+    box-shadow 200ms ease;
 }
 @utility chronicle-card-hover {
   &:hover {
     border-color: color-mix(in oklab, var(--gold) 55%, var(--border));
-    box-shadow: 0 0 0 1px color-mix(in oklab, var(--gold) 15%, transparent),
-                0 8px 24px -12px oklch(0 0 0 / 0.6);
+    box-shadow:
+      0 0 0 1px color-mix(in oklab, var(--gold) 15%, transparent),
+      0 8px 24px -12px oklch(0 0 0 / 0.6);
   }
 }
 @utility gold-rule {
@@ -113,7 +137,8 @@
   opacity: 0.55;
 }
 @utility ornament {
-  &::before, &::after {
+  &::before,
+  &::after {
     content: "";
     display: inline-block;
     width: 2.5rem;

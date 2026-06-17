@@ -69,6 +69,7 @@ const campaignContentSchema = z.object({
     z.object({
       slug: z.string().min(1),
       name: z.string().min(1),
+      image: z.string().optional(),
       role: z.string(),
       location: z.string(),
       relation: z.string(),
@@ -210,6 +211,7 @@ function mapNpc(row: Record<string, unknown>) {
   return {
     slug: asString(row, "slug"),
     name: asString(row, "name"),
+    image: asString(row, "image"),
     role: asString(row, "role"),
     location: asString(row, "location"),
     relation: asString(row, "relation"),
@@ -335,6 +337,7 @@ async function saveCampaignContentToDb(content: CampaignContent) {
     content.npcs.map((npc, index) => ({
       slug: npc.slug,
       name: npc.name,
+      image: npc.image ?? "",
       role: npc.role,
       location: npc.location,
       relation: npc.relation,

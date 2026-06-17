@@ -1,6 +1,7 @@
 export type Npc = {
   slug: string;
   name: string;
+  image?: string;
   role: string;
   location: string;
   relation: string;
@@ -12,6 +13,7 @@ export const npcs: Npc[] = [
   {
     slug: "irma-maelia",
     name: "Irmã Maelia",
+    image: "",
     role: "Sacerdotisa errante de Prios",
     location: "Caravana dos refugiados",
     relation: "Aliada da caravana, observadora atenta de Sebastian",
@@ -22,6 +24,7 @@ export const npcs: Npc[] = [
   {
     slug: "capitao-draven",
     name: "Capitão Draven",
+    image: "",
     role: "Capitão da Guarda Ambriana",
     location: "Posto de fronteira de Kasta",
     relation: "Desconfiança mútua com Sebastian",
@@ -32,6 +35,7 @@ export const npcs: Npc[] = [
   {
     slug: "orik-mao-partida",
     name: "Orik Mão-Partida",
+    image: "",
     role: "Carroceiro e ferreiro improvisado",
     location: "Caravana dos refugiados",
     relation: "Devoto silencioso de Sebastian",
@@ -42,6 +46,7 @@ export const npcs: Npc[] = [
   {
     slug: "elira-dos-vales",
     name: "Elira dos Vales",
+    image: "",
     role: "Mística itinerante",
     location: "Cruzou a caravana uma vez",
     relation: "Parente distante de Lysandra",
@@ -52,6 +57,7 @@ export const npcs: Npc[] = [
   {
     slug: "padre-halbrecht",
     name: "Padre Halbrecht",
+    image: "",
     role: "Sacerdote idoso da Igreja do Sol",
     location: "Última vez visto em Alberetor",
     relation: "Mentor de Sebastian",
