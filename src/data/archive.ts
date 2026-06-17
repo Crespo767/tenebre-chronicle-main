@@ -1,7 +1,7 @@
 export type ArchiveItem = {
   slug: string;
   title: string;
-  type: "Carta" | "Mapa" | "Imagem" | "Documento" | "Handout";
+  type: string;
   discovered: string;
   description: string;
   link?: string;

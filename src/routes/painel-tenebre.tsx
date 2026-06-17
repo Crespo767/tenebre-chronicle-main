@@ -37,6 +37,8 @@ type DraftItem = Record<string, unknown>;
 
 const buttonBase =
   "inline-flex h-10 items-center justify-center gap-2 rounded-sm border px-3 text-sm font-medium tracking-wide transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--gold)]/55 disabled:cursor-not-allowed disabled:opacity-45";
+const defaultArchiveTypes = ["Carta", "Mapa", "Imagem", "Documento", "Handout"];
+const otherArchiveTypeValue = "__other_archive_type__";
 
 const sections: {
   key: SectionKey;
@@ -293,7 +295,7 @@ function SelectField({
         : [];
   const stringValue = String(value ?? entries[0]?.value ?? "");
   const selectedLabel =
-    entries.find((option) => option.value === stringValue)?.label ?? entries[0]?.label ?? "";
+    entries.find((option) => option.value === stringValue)?.label ?? stringValue;
 
   function choose(nextValue: string) {
     onChange(nextValue);
@@ -838,11 +840,13 @@ function SectionForm({
   draft,
   setField,
   uploadImage,
+  archiveTypeOptions = defaultArchiveTypes,
 }: {
   section: SectionKey;
   draft: DraftItem;
   setField: (field: string, value: unknown) => void;
   uploadImage?: (file: File) => Promise<string>;
+  archiveTypeOptions?: string[];
 }) {
   if (section === "sessions") {
     return (
@@ -1080,10 +1084,24 @@ function SectionForm({
             <Field label="Slug" value={draft.slug} onChange={(value) => setField("slug", value)} />
             <SelectField
               label="Tipo"
-              value={draft.type}
-              onChange={(value) => setField("type", value)}
-              options={["Carta", "Mapa", "Imagem", "Documento", "Handout"]}
+              value={
+                String(draft.type ?? "").trim() === "" ? otherArchiveTypeValue : draft.type
+              }
+              onChange={(value) =>
+                setField("type", value === otherArchiveTypeValue ? "" : value)
+              }
+              options={[
+                ...archiveTypeOptions,
+                { value: otherArchiveTypeValue, label: "Outros" },
+              ]}
             />
+            {String(draft.type ?? "").trim() === "" && (
+              <Field
+                label="Tipo personalizado"
+                value={draft.type}
+                onChange={(value) => setField("type", value)}
+              />
+            )}
             <Field
               label="Descoberto em"
               value={draft.discovered}
@@ -1276,6 +1294,12 @@ function Editor({
     () => sections.find((entry) => entry.key === section) ?? sections[0],
     [section],
   );
+  const archiveTypeOptions = useMemo(() => {
+    const types = content.archive
+      .map((item) => item.type.trim())
+      .filter(Boolean);
+    return Array.from(new Set([...defaultArchiveTypes, ...types]));
+  }, [content.archive]);
   const items = getCollection(content, section);
   const activeItem = items[selectedIndex];
   const hasDraftChanges = useMemo(
@@ -1588,6 +1612,7 @@ function Editor({
               draft={draft}
               setField={setField}
               uploadImage={uploadImage}
+              archiveTypeOptions={archiveTypeOptions}
             />
           )}
 

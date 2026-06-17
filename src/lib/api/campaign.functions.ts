@@ -77,7 +77,7 @@ const campaignContentSchema = z.object({
     z.object({
       slug: z.string().min(1),
       title: z.string().min(1),
-      type: z.enum(["Carta", "Mapa", "Imagem", "Documento", "Handout"]),
+      type: z.string().min(1),
       discovered: z.string(),
       description: z.string(),
       link: z.string().optional(),
@@ -216,12 +216,7 @@ function mapArchiveItem(row: Record<string, unknown>) {
   return {
     slug: asString(row, "slug"),
     title: asString(row, "title"),
-    type: asString(row, "type", "Documento") as
-      | "Carta"
-      | "Mapa"
-      | "Imagem"
-      | "Documento"
-      | "Handout",
+    type: asString(row, "type", "Documento"),
     discovered: asString(row, "discovered"),
     description: asString(row, "description"),
     link: asOptionalString(row, "link"),
