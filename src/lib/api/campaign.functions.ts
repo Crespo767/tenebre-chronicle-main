@@ -278,21 +278,47 @@ async function readCampaignContent(allowCache = true): Promise<CampaignContent> 
   return content;
 }
 
-async function replaceTable(table: string, deleteColumn: string, rows: Record<string, unknown>[]) {
-  const supabase = await getSupabase();
-  const deleted = await supabase.from(table).delete().neq(deleteColumn, "__tenebre_never__");
-  if (deleted.error) throw new Error(deleted.error.message);
-  if (!rows.length) return;
+function rowKey(row: Record<string, unknown>, keyColumns: string[]) {
+  return keyColumns.map((column) => String(row[column] ?? "")).join("\u001f");
+}
 
-  const inserted = await supabase.from(table).insert(rows);
-  if (inserted.error) throw new Error(inserted.error.message);
+async function deleteRow(table: string, keyColumns: string[], row: Record<string, unknown>) {
+  const supabase = await getSupabase();
+  let query = supabase.from(table).delete();
+
+  for (const column of keyColumns) {
+    query = query.eq(column, row[column]);
+  }
+
+  const { error } = await query;
+  if (error) throw new Error(error.message);
+}
+
+async function syncTable(table: string, keyColumns: string[], rows: Record<string, unknown>[]) {
+  const supabase = await getSupabase();
+  const selected = await supabase.from(table).select(keyColumns.join(","));
+  if (selected.error) throw new Error(selected.error.message);
+
+  if (rows.length) {
+    const saved = await supabase.from(table).upsert(rows, {
+      onConflict: keyColumns.join(","),
+    });
+    if (saved.error) throw new Error(saved.error.message);
+  }
+
+  const incomingKeys = new Set(rows.map((row) => rowKey(row, keyColumns)));
+  const obsoleteRows = ((selected.data ?? []) as Record<string, unknown>[]).filter(
+    (row) => !incomingKeys.has(rowKey(row, keyColumns)),
+  );
+
+  await Promise.all(obsoleteRows.map((row) => deleteRow(table, keyColumns, row)));
 }
 
 async function saveCampaignContentToDb(content: CampaignContent) {
   await Promise.all([
-    replaceTable(
+    syncTable(
       "campaign_sessions",
-      "slug",
+      ["number"],
       content.sessions.map((session, index) => ({
         slug: session.slug,
         number: session.number,
@@ -309,9 +335,9 @@ async function saveCampaignContentToDb(content: CampaignContent) {
         order_index: index + 1,
       })),
     ),
-    replaceTable(
+    syncTable(
       "campaign_characters",
-      "slug",
+      ["slug"],
       content.characters.map((character, index) => ({
         slug: character.slug,
         name: character.name,
@@ -328,9 +354,9 @@ async function saveCampaignContentToDb(content: CampaignContent) {
         order_index: index + 1,
       })),
     ),
-    replaceTable(
+    syncTable(
       "campaign_npcs",
-      "slug",
+      ["slug"],
       content.npcs.map((npc, index) => ({
         slug: npc.slug,
         name: npc.name,
@@ -343,9 +369,9 @@ async function saveCampaignContentToDb(content: CampaignContent) {
         order_index: index + 1,
       })),
     ),
-    replaceTable(
+    syncTable(
       "campaign_archive_items",
-      "slug",
+      ["slug"],
       content.archive.map((item, index) => ({
         slug: item.slug,
         title: item.title,
@@ -356,9 +382,9 @@ async function saveCampaignContentToDb(content: CampaignContent) {
         order_index: index + 1,
       })),
     ),
-    replaceTable(
+    syncTable(
       "campaign_master_notes",
-      "title",
+      ["title", "note_date"],
       content.masterNotes.map((note, index) => ({
         title: note.title,
         note_date: note.date,
