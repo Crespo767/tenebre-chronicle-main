@@ -279,86 +279,84 @@ async function replaceTable(table: string, deleteColumn: string, rows: Record<st
 }
 
 async function saveCampaignContentToDb(content: CampaignContent) {
-  await replaceTable(
-    "campaign_sessions",
-    "slug",
-    content.sessions.map((session, index) => ({
-      slug: session.slug,
-      number: session.number,
-      title: session.title,
-      session_date: session.date,
-      present: session.present,
-      summary: session.summary,
-      events: session.events,
-      npcs: session.npcs,
-      locations: session.locations,
-      consequences: session.consequences,
-      hooks: session.hooks,
-      master_notes: session.masterNotes,
-      order_index: index + 1,
-    })),
-  );
-
-  await replaceTable(
-    "campaign_characters",
-    "slug",
-    content.characters.map((character, index) => ({
-      slug: character.slug,
-      name: character.name,
-      role: character.role,
-      people: character.people,
-      shadow: character.shadow ?? null,
-      quote: character.quote,
-      image: character.image,
-      player: character.player ?? null,
-      status: character.status,
-      appearance: character.appearance,
-      goal: character.goal,
-      history: character.history,
-      order_index: index + 1,
-    })),
-  );
-
-  await replaceTable(
-    "campaign_npcs",
-    "slug",
-    content.npcs.map((npc, index) => ({
-      slug: npc.slug,
-      name: npc.name,
-      image: npc.image ?? "",
-      role: npc.role,
-      location: npc.location,
-      relation: npc.relation,
-      status: npc.status,
-      summary: npc.summary,
-      order_index: index + 1,
-    })),
-  );
-
-  await replaceTable(
-    "campaign_archive_items",
-    "slug",
-    content.archive.map((item, index) => ({
-      slug: item.slug,
-      title: item.title,
-      type: item.type,
-      discovered: item.discovered,
-      description: item.description,
-      link: item.link || null,
-      order_index: index + 1,
-    })),
-  );
-
-  await replaceTable(
-    "campaign_master_notes",
-    "title",
-    content.masterNotes.map((note, index) => ({
-      title: note.title,
-      note_date: note.date,
-      body: note.body,
-      order_index: index + 1,
-    })),
-  );
+  await Promise.all([
+    replaceTable(
+      "campaign_sessions",
+      "slug",
+      content.sessions.map((session, index) => ({
+        slug: session.slug,
+        number: session.number,
+        title: session.title,
+        session_date: session.date,
+        present: session.present,
+        summary: session.summary,
+        events: session.events,
+        npcs: session.npcs,
+        locations: session.locations,
+        consequences: session.consequences,
+        hooks: session.hooks,
+        master_notes: session.masterNotes,
+        order_index: index + 1,
+      })),
+    ),
+    replaceTable(
+      "campaign_characters",
+      "slug",
+      content.characters.map((character, index) => ({
+        slug: character.slug,
+        name: character.name,
+        role: character.role,
+        people: character.people,
+        shadow: character.shadow ?? null,
+        quote: character.quote,
+        image: character.image,
+        player: character.player ?? null,
+        status: character.status,
+        appearance: character.appearance,
+        goal: character.goal,
+        history: character.history,
+        order_index: index + 1,
+      })),
+    ),
+    replaceTable(
+      "campaign_npcs",
+      "slug",
+      content.npcs.map((npc, index) => ({
+        slug: npc.slug,
+        name: npc.name,
+        image: npc.image ?? "",
+        role: npc.role,
+        location: npc.location,
+        relation: npc.relation,
+        status: npc.status,
+        summary: npc.summary,
+        order_index: index + 1,
+      })),
+    ),
+    replaceTable(
+      "campaign_archive_items",
+      "slug",
+      content.archive.map((item, index) => ({
+        slug: item.slug,
+        title: item.title,
+        type: item.type,
+        discovered: item.discovered,
+        description: item.description,
+        link: item.link || null,
+        order_index: index + 1,
+      })),
+    ),
+    replaceTable(
+      "campaign_master_notes",
+      "title",
+      content.masterNotes.map((note, index) => ({
+        title: note.title,
+        note_date: note.date,
+        body: note.body,
+        order_index: index + 1,
+      })),
+    ),
+  ]);
 }
 
 async function passwordHash(password: string) {

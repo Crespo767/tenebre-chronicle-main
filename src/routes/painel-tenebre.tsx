@@ -76,6 +76,14 @@ function getItemLabel(section: SectionKey, item: DraftItem, index: number) {
   return `Registro ${index + 1}`;
 }
 
+function getSectionSingularLabel(section: SectionKey) {
+  if (section === "sessions") return "Sessão";
+  if (section === "characters") return "Personagem";
+  if (section === "npcs") return "NPC";
+  if (section === "archive") return "Documento";
+  return "Nota";
+}
+
 function createItem(section: SectionKey, content: CampaignContent): DraftItem {
   if (section === "sessions") {
     const nextNumber = Math.max(0, ...content.sessions.map((session) => session.number)) + 1;
@@ -534,6 +542,90 @@ function IconButton({
     >
       {children}
     </button>
+  );
+}
+
+function DialogFrame({
+  title,
+  description,
+  children,
+}: {
+  title: string;
+  description?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 px-4 backdrop-blur-sm">
+      <div className="w-full max-w-md rounded-sm border border-border bg-background p-5 shadow-[0_18px_70px_oklch(0.08_0.01_95_/_0.55)]">
+        <h2 className="font-display text-3xl text-foreground">{title}</h2>
+        {description && <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{description}</p>}
+        <div className="mt-5">{children}</div>
+      </div>
+    </div>
+  );
+}
+
+function NewItemDialog({
+  sectionLabel,
+  value,
+  onChange,
+  onCancel,
+  onConfirm,
+}: {
+  sectionLabel: string;
+  value: string;
+  onChange: (value: string) => void;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  function submit(event: FormEvent) {
+    event.preventDefault();
+    onConfirm();
+  }
+
+  return (
+    <DialogFrame
+      title={`Novo ${sectionLabel}`}
+      description="Defina o nome inicial do registro para já abrir a ficha no ponto certo."
+    >
+      <form onSubmit={submit} className="space-y-4">
+        <Field label="Nome" value={value} onChange={onChange} />
+        <div className="flex flex-wrap justify-end gap-2">
+          <IconButton onClick={onCancel} variant="quiet">
+            Cancelar
+          </IconButton>
+          <IconButton type="submit" disabled={!value.trim()}>
+            Criar
+          </IconButton>
+        </div>
+      </form>
+    </DialogFrame>
+  );
+}
+
+function ConfirmDeleteDialog({
+  itemLabel,
+  onCancel,
+  onConfirm,
+}: {
+  itemLabel: string;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <DialogFrame
+      title="Remover registro"
+      description={`Confirme a remoção de "${itemLabel}". A alteração só será publicada quando você salvar.`}
+    >
+      <div className="flex flex-wrap justify-end gap-2">
+        <IconButton onClick={onCancel} variant="quiet">
+          Cancelar
+        </IconButton>
+        <IconButton onClick={onConfirm} variant="danger">
+          Remover
+        </IconButton>
+      </div>
+    </DialogFrame>
   );
 }
 
@@ -1087,7 +1179,6 @@ function Editor({
   username: string;
   onLogout: () => void;
 }) {
-  const router = useRouter();
   const saveContentFn = useServerFn(saveCampaignContent);
   const uploadImageFn = useServerFn(uploadCharacterImage);
   const [content, setContent] = useState<CampaignContent>(() => cloneContent(initialContent));
@@ -1097,6 +1188,12 @@ function Editor({
     () => cloneContent(defaultCampaignContent).sessions[0] as DraftItem,
   );
   const [savedMessage, setSavedMessage] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const [contentRevision, setContentRevision] = useState(0);
+  const [savedRevision, setSavedRevision] = useState(0);
+  const [newItemName, setNewItemName] = useState("");
+  const [showNewDialog, setShowNewDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   const activeMeta = useMemo(
     () => sections.find((entry) => entry.key === section) ?? sections[0],
@@ -1104,14 +1201,17 @@ function Editor({
   );
   const items = getCollection(content, section);
   const activeItem = items[selectedIndex];
-  const hasUnsavedChanges = useMemo(
+  const hasDraftChanges = useMemo(
     () => Boolean(activeItem) && JSON.stringify(draft) !== JSON.stringify(activeItem),
     [activeItem, draft],
   );
+  const hasUnsavedChanges = hasDraftChanges || contentRevision !== savedRevision;
   const hasSelection = Boolean(activeItem);
 
   useEffect(() => {
     setContent(cloneContent(initialContent));
+    setContentRevision(0);
+    setSavedRevision(0);
   }, [initialContent]);
 
   useEffect(() => {
@@ -1150,11 +1250,25 @@ function Editor({
     setSavedMessage("");
   }
 
+  function markContentDirty() {
+    setContentRevision((current) => current + 1);
+    setSavedMessage("");
+  }
+
   async function persistContent(nextContent: CampaignContent, message: string) {
-    const result = await saveContentFn({ data: nextContent });
-    setContent(result.content);
-    setSavedMessage(message);
-    await router.invalidate();
+    setIsSaving(true);
+    try {
+      const result = await saveContentFn({ data: nextContent });
+      setContent(result.content);
+      setContentRevision((current) => {
+        const nextRevision = current + 1;
+        setSavedRevision(nextRevision);
+        return nextRevision;
+      });
+      setSavedMessage(message);
+    } finally {
+      setIsSaving(false);
+    }
   }
 
   async function uploadImage(file: File) {
@@ -1179,46 +1293,117 @@ function Editor({
     return result.url;
   }
 
-  async function addItem() {
+  function openNewDialog() {
     if (!confirmDiscardChanges()) return;
+    const nextItem = createItem(section, content);
+    setNewItemName(String(nextItem.name ?? nextItem.title ?? ""));
+    setShowNewDialog(true);
+  }
+
+  function applyNameToItem(item: DraftItem, name: string): DraftItem {
+    const cleanName = name.trim();
+    if (section === "sessions") {
+      return {
+        ...item,
+        title: cleanName,
+        slug: uniqueSlug(
+          cleanName,
+          content.sessions.map((session) => session.slug),
+        ),
+      };
+    }
+
+    if (section === "characters") {
+      return {
+        ...item,
+        name: cleanName,
+        slug: uniqueSlug(
+          cleanName,
+          content.characters.map((character) => character.slug),
+        ),
+      };
+    }
+
+    if (section === "npcs") {
+      return {
+        ...item,
+        name: cleanName,
+        slug: uniqueSlug(
+          cleanName,
+          content.npcs.map((npc) => npc.slug),
+        ),
+      };
+    }
+
+    if (section === "archive") {
+      return {
+        ...item,
+        title: cleanName,
+        slug: uniqueSlug(
+          cleanName,
+          content.archive.map((item) => item.slug),
+        ),
+      };
+    }
+
+    return { ...item, title: cleanName };
+  }
+
+  function addItem() {
+    const itemName = newItemName.trim();
+    if (!itemName) return;
+
+    const newItem = applyNameToItem(createItem(section, content), itemName);
     const next = cloneContent(content) as unknown as Record<SectionKey, DraftItem[]>;
-    next[section] = [createItem(section, content), ...next[section]];
-    await persistContent(next as unknown as CampaignContent, "Novo registro criado.");
+    next[section] = [newItem, ...next[section]];
+    setContent(next as unknown as CampaignContent);
+    setDraft(newItem);
     setSelectedIndex(0);
+    setShowNewDialog(false);
+    markContentDirty();
+    setSavedMessage("Novo registro criado. Salve para publicar.");
   }
 
   async function saveItem() {
-    if (!hasSelection) return;
+    if (!hasUnsavedChanges || isSaving) return;
     const next = cloneContent(content) as unknown as Record<SectionKey, DraftItem[]>;
-    next[section] = [...next[section]];
-    next[section][selectedIndex] = draft;
+    if (hasSelection) {
+      next[section] = [...next[section]];
+      next[section][selectedIndex] = draft;
+    }
     await persistContent(next as unknown as CampaignContent, "Alterações salvas.");
   }
 
-  async function deleteItem() {
+  function openDeleteDialog() {
     if (!items[selectedIndex]) return;
-    if (!window.confirm("Remover este registro?")) return;
+    setShowDeleteDialog(true);
+  }
 
+  function deleteItem() {
+    if (!items[selectedIndex]) return;
     const next = cloneContent(content) as unknown as Record<SectionKey, DraftItem[]>;
     next[section] = next[section].filter((_, index) => index !== selectedIndex);
-    await persistContent(next as unknown as CampaignContent, "Registro removido.");
+    setContent(next as unknown as CampaignContent);
     setSelectedIndex(0);
+    setShowDeleteDialog(false);
+    markContentDirty();
+    setSavedMessage("Registro removido. Salve para publicar.");
   }
 
   function renderActionButtons() {
     return (
       <>
-        <IconButton onClick={addItem} variant="quiet">
+        <IconButton onClick={openNewDialog} variant="quiet" disabled={isSaving}>
           <Plus className="h-4 w-4" />
           Novo
         </IconButton>
-        <IconButton onClick={deleteItem} variant="danger" disabled={!hasSelection}>
+        <IconButton onClick={openDeleteDialog} variant="danger" disabled={!hasSelection || isSaving}>
           <Trash2 className="h-4 w-4" />
           Remover
         </IconButton>
-        <IconButton onClick={saveItem} disabled={!hasSelection || !hasUnsavedChanges}>
+        <IconButton onClick={saveItem} disabled={!hasUnsavedChanges || isSaving}>
           <Save className="h-4 w-4" />
-          Salvar
+          {isSaving ? "Salvando..." : "Salvar"}
         </IconButton>
       </>
     );
@@ -1322,6 +1507,22 @@ function Editor({
       </div>
 
       <BackupPanel content={content} onReplace={persistContent} />
+      {showNewDialog && (
+        <NewItemDialog
+          sectionLabel={getSectionSingularLabel(section)}
+          value={newItemName}
+          onChange={setNewItemName}
+          onCancel={() => setShowNewDialog(false)}
+          onConfirm={addItem}
+        />
+      )}
+      {showDeleteDialog && activeItem && (
+        <ConfirmDeleteDialog
+          itemLabel={getItemLabel(section, activeItem, selectedIndex)}
+          onCancel={() => setShowDeleteDialog(false)}
+          onConfirm={deleteItem}
+        />
+      )}
     </PageContainer>
   );
 }

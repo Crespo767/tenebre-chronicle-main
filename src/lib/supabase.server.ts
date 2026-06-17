@@ -6,6 +6,8 @@ type SupabaseConfig = {
 };
 
 const SUPABASE_REQUEST_TIMEOUT_MS = 5_000;
+let adminClient: ReturnType<typeof createClient> | null = null;
+let adminClientConfigKey = "";
 
 function isValidSupabaseUrl(value: string) {
   try {
@@ -72,7 +74,10 @@ export function getSupabaseAdminClient() {
     );
   }
 
-  return createClient(config.url, config.secretKey, {
+  const configKey = `${config.url}:${config.secretKey}`;
+  if (adminClient && adminClientConfigKey === configKey) return adminClient;
+
+  adminClient = createClient(config.url, config.secretKey, {
     auth: {
       autoRefreshToken: false,
       persistSession: false,
@@ -81,4 +86,6 @@ export function getSupabaseAdminClient() {
       fetch: fetchWithTimeout,
     },
   });
+  adminClientConfigKey = configKey;
+  return adminClient;
 }
