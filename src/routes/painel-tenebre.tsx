@@ -615,7 +615,7 @@ function ConfirmDeleteDialog({
   return (
     <DialogFrame
       title="Remover registro"
-      description={`Confirme a remoção de "${itemLabel}". A alteração só será publicada quando você salvar.`}
+      description={`Confirme a remoção de "${itemLabel}". Esta ação será salva imediatamente.`}
     >
       <div className="flex flex-wrap justify-end gap-2">
         <IconButton onClick={onCancel} variant="quiet">
@@ -623,6 +623,35 @@ function ConfirmDeleteDialog({
         </IconButton>
         <IconButton onClick={onConfirm} variant="danger">
           Remover
+        </IconButton>
+      </div>
+    </DialogFrame>
+  );
+}
+
+function ConfirmActionDialog({
+  title,
+  description,
+  confirmLabel,
+  variant = "danger",
+  onCancel,
+  onConfirm,
+}: {
+  title: string;
+  description: string;
+  confirmLabel: string;
+  variant?: "default" | "danger";
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <DialogFrame title={title} description={description}>
+      <div className="flex flex-wrap justify-end gap-2">
+        <IconButton onClick={onCancel} variant="quiet">
+          Cancelar
+        </IconButton>
+        <IconButton onClick={onConfirm} variant={variant}>
+          {confirmLabel}
         </IconButton>
       </div>
     </DialogFrame>
@@ -1090,6 +1119,7 @@ function BackupPanel({
 }) {
   const [importText, setImportText] = useState("");
   const [message, setMessage] = useState("");
+  const [showResetDialog, setShowResetDialog] = useState(false);
 
   function exportJson() {
     const blob = new Blob([JSON.stringify(content, null, 2)], {
@@ -1126,9 +1156,9 @@ function BackupPanel({
   }
 
   async function resetAll() {
-    if (!window.confirm("Restaurar todo o conteúdo original do projeto?")) return;
     await onReplace(cloneContent(defaultCampaignContent), "Conteúdo original restaurado.");
     setMessage("Conteúdo original restaurado.");
+    setShowResetDialog(false);
   }
 
   return (
@@ -1146,7 +1176,7 @@ function BackupPanel({
             <Download className="h-4 w-4" />
             Exportar
           </IconButton>
-          <IconButton onClick={resetAll} variant="danger">
+          <IconButton onClick={() => setShowResetDialog(true)} variant="danger">
             <RotateCcw className="h-4 w-4" />
             Restaurar original
           </IconButton>
@@ -1166,6 +1196,15 @@ function BackupPanel({
         </IconButton>
         {message && <p className="text-sm text-muted-foreground">{message}</p>}
       </div>
+      {showResetDialog && (
+        <ConfirmActionDialog
+          title="Restaurar original"
+          description="Isso substitui todo o conteúdo editável pelo conteúdo original do projeto."
+          confirmLabel="Restaurar"
+          onCancel={() => setShowResetDialog(false)}
+          onConfirm={() => void resetAll()}
+        />
+      )}
     </ChronicleCard>
   );
 }
@@ -1194,6 +1233,7 @@ function Editor({
   const [newItemName, setNewItemName] = useState("");
   const [showNewDialog, setShowNewDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [discardAction, setDiscardAction] = useState<(() => void) | null>(null);
 
   const activeMeta = useMemo(
     () => sections.find((entry) => entry.key === section) ?? sections[0],
@@ -1223,26 +1263,30 @@ function Editor({
     );
   }, [content, section, selectedIndex]);
 
-  function confirmDiscardChanges() {
-    return (
-      !hasUnsavedChanges ||
-      window.confirm("Existem alterações não salvas. Deseja descartá-las e continuar?")
-    );
+  function runOrConfirmDiscard(action: () => void) {
+    if (!hasUnsavedChanges) {
+      action();
+      return;
+    }
+
+    setDiscardAction(() => action);
   }
 
   function selectSection(nextSection: SectionKey) {
     if (nextSection === section) return;
-    if (!confirmDiscardChanges()) return;
-    setSection(nextSection);
-    setSelectedIndex(0);
-    setSavedMessage("");
+    runOrConfirmDiscard(() => {
+      setSection(nextSection);
+      setSelectedIndex(0);
+      setSavedMessage("");
+    });
   }
 
   function selectItem(nextIndex: number) {
     if (nextIndex === selectedIndex) return;
-    if (!confirmDiscardChanges()) return;
-    setSelectedIndex(nextIndex);
-    setSavedMessage("");
+    runOrConfirmDiscard(() => {
+      setSelectedIndex(nextIndex);
+      setSavedMessage("");
+    });
   }
 
   function setField(field: string, value: unknown) {
@@ -1294,10 +1338,11 @@ function Editor({
   }
 
   function openNewDialog() {
-    if (!confirmDiscardChanges()) return;
-    const nextItem = createItem(section, content);
-    setNewItemName(String(nextItem.name ?? nextItem.title ?? ""));
-    setShowNewDialog(true);
+    runOrConfirmDiscard(() => {
+      const nextItem = createItem(section, content);
+      setNewItemName(String(nextItem.name ?? nextItem.title ?? ""));
+      setShowNewDialog(true);
+    });
   }
 
   function applyNameToItem(item: DraftItem, name: string): DraftItem {
@@ -1379,15 +1424,13 @@ function Editor({
     setShowDeleteDialog(true);
   }
 
-  function deleteItem() {
+  async function deleteItem() {
     if (!items[selectedIndex]) return;
     const next = cloneContent(content) as unknown as Record<SectionKey, DraftItem[]>;
     next[section] = next[section].filter((_, index) => index !== selectedIndex);
-    setContent(next as unknown as CampaignContent);
-    setSelectedIndex(0);
     setShowDeleteDialog(false);
-    markContentDirty();
-    setSavedMessage("Registro removido. Salve para publicar.");
+    await persistContent(next as unknown as CampaignContent, "Registro removido.");
+    setSelectedIndex(0);
   }
 
   function renderActionButtons() {
@@ -1521,6 +1564,19 @@ function Editor({
           itemLabel={getItemLabel(section, activeItem, selectedIndex)}
           onCancel={() => setShowDeleteDialog(false)}
           onConfirm={deleteItem}
+        />
+      )}
+      {discardAction && (
+        <ConfirmActionDialog
+          title="Descartar alterações"
+          description="Existem alterações não salvas neste registro. Deseja descartá-las e continuar?"
+          confirmLabel="Descartar"
+          onCancel={() => setDiscardAction(null)}
+          onConfirm={() => {
+            const action = discardAction;
+            setDiscardAction(null);
+            action();
+          }}
         />
       )}
     </PageContainer>
