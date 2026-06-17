@@ -53,8 +53,13 @@ function CharacterDetail() {
               <span className="text-foreground">Ocupação:</span> {c.role}
             </p>
             <p className="text-muted-foreground">
-              <span className="text-foreground">Povo:</span> {c.people}
+              <span className="text-foreground">Raça:</span> {c.people}
             </p>
+            {c.shadow && (
+              <p className="text-muted-foreground">
+                <span className="text-foreground">Sombra:</span> {c.shadow}
+              </p>
+            )}
             {c.player && (
               <p className="text-muted-foreground">
                 <span className="text-foreground">Jogador(a):</span> {c.player}
@@ -70,9 +75,6 @@ function CharacterDetail() {
 
         <article className="min-w-0">
           <h1 className="font-display text-4xl text-foreground sm:text-5xl">{c.name}</h1>
-          {c.subtitle && (
-            <p className="mt-2 font-display italic text-muted-foreground">{c.subtitle}</p>
-          )}
           <div className="gold-rule mt-4 w-32" />
           <blockquote className="mt-5 border-l-2 border-[var(--gold)]/50 pl-4 font-display italic text-foreground/85">
             “{c.quote}”
@@ -87,30 +89,6 @@ function CharacterDetail() {
           <Section title="Histórico">
             <p>{c.history}</p>
           </Section>
-          {c.bonds && (
-            <Section title="Vínculos">
-              <p>{c.bonds}</p>
-            </Section>
-          )}
-          {c.items && c.items.length > 0 && (
-            <Section title="Itens importantes">
-              <ul className="list-inside list-['—_'] space-y-1">
-                {c.items.map((it: string) => (
-                  <li key={it}>{it}</li>
-                ))}
-              </ul>
-            </Section>
-          )}
-          {c.evolution && (
-            <Section title="Notas de evolução">
-              <p>{c.evolution}</p>
-            </Section>
-          )}
-          {c.relations && (
-            <Section title="Relações com NPCs">
-              <p>{c.relations}</p>
-            </Section>
-          )}
         </article>
       </div>
     </PageContainer>

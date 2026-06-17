@@ -51,18 +51,14 @@ const campaignContentSchema = z.object({
       name: z.string().min(1),
       role: z.string(),
       people: z.string(),
+      shadow: z.string().optional(),
       quote: z.string(),
       image: z.string(),
-      subtitle: z.string().optional(),
       player: z.string().optional(),
       status: z.string(),
       appearance: z.string(),
       goal: z.string(),
       history: z.string(),
-      bonds: z.string().optional(),
-      items: stringArraySchema.optional(),
-      evolution: z.string().optional(),
-      relations: z.string().optional(),
     }),
   ),
   npcs: z.array(
@@ -190,9 +186,9 @@ function mapCharacter(row: Record<string, unknown>) {
   return {
     slug: asString(row, "slug"),
     name: asString(row, "name"),
-    subtitle: asOptionalString(row, "subtitle"),
     role: asString(row, "role"),
     people: asString(row, "people"),
+    shadow: asOptionalString(row, "shadow"),
     quote: asString(row, "quote"),
     image: asString(row, "image"),
     player: asOptionalString(row, "player"),
@@ -200,10 +196,6 @@ function mapCharacter(row: Record<string, unknown>) {
     appearance: asString(row, "appearance"),
     goal: asString(row, "goal"),
     history: asString(row, "history"),
-    bonds: asOptionalString(row, "bonds"),
-    items: asStringArray(row, "items"),
-    evolution: asOptionalString(row, "evolution"),
-    relations: asOptionalString(row, "relations"),
   };
 }
 
@@ -313,9 +305,9 @@ async function saveCampaignContentToDb(content: CampaignContent) {
     content.characters.map((character, index) => ({
       slug: character.slug,
       name: character.name,
-      subtitle: character.subtitle ?? null,
       role: character.role,
       people: character.people,
+      shadow: character.shadow ?? null,
       quote: character.quote,
       image: character.image,
       player: character.player ?? null,
@@ -323,10 +315,6 @@ async function saveCampaignContentToDb(content: CampaignContent) {
       appearance: character.appearance,
       goal: character.goal,
       history: character.history,
-      bonds: character.bonds ?? null,
-      items: character.items ?? [],
-      evolution: character.evolution ?? null,
-      relations: character.relations ?? null,
       order_index: index + 1,
     })),
   );

@@ -104,18 +104,14 @@ function createItem(section: SectionKey, content: CampaignContent): DraftItem {
       name: "Novo personagem",
       role: "",
       people: "",
+      shadow: "",
       quote: "",
       image: "",
-      subtitle: "",
       player: "",
       status: "Vivo",
       appearance: "",
       goal: "",
       history: "",
-      bonds: "",
-      items: [],
-      evolution: "",
-      relations: "",
     };
   }
 
@@ -778,11 +774,6 @@ function SectionForm({
               onChange={(value) => setField("slug", value)}
             />
             <Field
-              label="Subtítulo"
-              value={draft.subtitle}
-              onChange={(value) => setField("subtitle", value)}
-            />
-            <Field
               label="Jogador(a)"
               value={draft.player}
               onChange={(value) => setField("player", value)}
@@ -793,7 +784,7 @@ function SectionForm({
               onChange={(value) => setField("role", value)}
             />
             <Field
-              label="Povo"
+              label="Raça"
               value={draft.people}
               onChange={(value) => setField("people", value)}
             />
@@ -801,6 +792,11 @@ function SectionForm({
               label="Status"
               value={draft.status}
               onChange={(value) => setField("status", value)}
+            />
+            <Field
+              label="Sombra"
+              value={draft.shadow}
+              onChange={(value) => setField("shadow", value)}
             />
           </div>
         </FormSection>
@@ -848,33 +844,6 @@ function SectionForm({
           </div>
         </FormSection>
 
-        <FormSection
-          title="Evolução e relações"
-          description="Campos complementares para acompanhamento da campanha."
-        >
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-            <TextAreaField
-              label="Vínculos"
-              value={draft.bonds}
-              onChange={(value) => setField("bonds", value)}
-            />
-            <LinesField
-              label="Itens importantes"
-              value={draft.items}
-              onChange={(value) => setField("items", value)}
-            />
-            <TextAreaField
-              label="Notas de evolução"
-              value={draft.evolution}
-              onChange={(value) => setField("evolution", value)}
-            />
-            <TextAreaField
-              label="Relações com NPCs"
-              value={draft.relations}
-              onChange={(value) => setField("relations", value)}
-            />
-          </div>
-        </FormSection>
       </div>
     );
   }
