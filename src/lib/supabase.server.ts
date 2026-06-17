@@ -5,7 +5,7 @@ type SupabaseConfig = {
   secretKey: string;
 };
 
-const SUPABASE_REQUEST_TIMEOUT_MS = 5_000;
+const SUPABASE_REQUEST_TIMEOUT_MS = 30_000;
 let adminClient: ReturnType<typeof createClient> | null = null;
 let adminClientConfigKey = "";
 

@@ -14,7 +14,15 @@ import {
   Trash2,
   Upload,
 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState, type ClipboardEvent, type FormEvent } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ClipboardEvent,
+  type DragEvent,
+  type FormEvent,
+} from "react";
 
 import { PageContainer, SectionTitle, ChronicleCard, StatusBadge } from "../components/ui-chrome";
 import {
@@ -41,6 +49,8 @@ const buttonBase =
 const defaultArchiveTypes = ["Carta", "Mapa", "Imagem", "Documento", "Handout"];
 const otherArchiveTypeValue = "__other_archive_type__";
 const editorStateStorageKey = "tenebre-admin-editor-state";
+const maxImageUploadBytes = 5 * 1024 * 1024;
+const targetImageUploadBytes = 3 * 1024 * 1024;
 
 const sections: {
   key: SectionKey;
@@ -457,6 +467,10 @@ function ImagePathField({
   const [previewFailed, setPreviewFailed] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadMessage, setUploadMessage] = useState("");
+  const [uploadDialog, setUploadDialog] = useState<{
+    title: string;
+    description: string;
+  } | null>(null);
   const isValidPath = !path || path.startsWith("/images/") || path.startsWith("https://");
 
   useEffect(() => {
@@ -466,21 +480,52 @@ function ImagePathField({
   async function uploadFile(file: File) {
     if (!onUpload) return;
     if (!isSupportedImageFile(file)) {
-      setUploadMessage("Formato de imagem não aceito.");
+      showUploadDialog(
+        "Formato não aceito",
+        "Use uma imagem PNG, JPG, WebP ou GIF. Outros formatos não são enviados para o bucket.",
+      );
+      return;
+    }
+    if (file.size > maxImageUploadBytes) {
+      showUploadDialog(
+        "Imagem muito grande",
+        `O arquivo tem ${formatFileSize(file.size)}. O limite atual é ${formatFileSize(
+          maxImageUploadBytes,
+        )}. Reduza a imagem e tente novamente.`,
+      );
       return;
     }
 
     setUploading(true);
     setUploadMessage("");
     try {
-      const url = await onUpload(file);
+      const uploadFile = await prepareImageForUpload(file);
+      if (uploadFile.size < file.size) {
+        setUploadMessage("Imagem otimizada para envio.");
+      }
+      if (uploadFile.size > targetImageUploadBytes) {
+        throw new Error(
+          `Não foi possível reduzir a imagem para envio. Ela ficou com ${formatFileSize(
+            uploadFile.size,
+          )}; tente salvar como JPG/WebP menor.`,
+        );
+      }
+      const url = await onUpload(uploadFile);
       onChange(url);
       setUploadMessage("Imagem enviada.");
     } catch (error) {
-      setUploadMessage(error instanceof Error ? error.message : "Falha ao enviar imagem.");
+      showUploadDialog(
+        "Falha ao enviar imagem",
+        error instanceof Error ? error.message : "O upload falhou sem uma mensagem detalhada.",
+      );
     } finally {
       setUploading(false);
     }
+  }
+
+  function showUploadDialog(title: string, description: string) {
+    setUploadMessage(description);
+    setUploadDialog({ title, description });
   }
 
   function handlePaste(event: ClipboardEvent<HTMLElement>) {
@@ -496,7 +541,24 @@ function ImagePathField({
       event.preventDefault();
       onChange(text);
       setUploadMessage("Link colado.");
+      return;
     }
+
+    if (text) {
+      event.preventDefault();
+      showUploadDialog(
+        "Não é possível usar esse texto",
+        "O navegador não permite que um site hospedado leia um arquivo pelo caminho local. Use o botão Arquivo local, arraste o arquivo para o campo ou cole uma URL https.",
+      );
+    }
+  }
+
+  function handleDrop(event: DragEvent<HTMLElement>) {
+    const file = Array.from(event.dataTransfer.files).find(isSupportedImageFile);
+    if (!file) return;
+
+    event.preventDefault();
+    void uploadFile(file);
   }
 
   async function pasteFromClipboard() {
@@ -524,14 +586,24 @@ function ImagePathField({
 
       const text = (await navigator.clipboard.readText()).trim();
       if (text) {
-        onChange(text);
-        setUploadMessage("Link colado.");
+        if (text.startsWith("https://") || text.startsWith("/images/")) {
+          onChange(text);
+          setUploadMessage("Link colado.");
+        } else {
+          showUploadDialog(
+            "Não é possível usar esse texto",
+            "O navegador não permite que um site hospedado leia um arquivo pelo caminho local. Use o botão Arquivo local, arraste o arquivo para o campo ou cole uma URL https.",
+          );
+        }
         return;
       }
 
-      setUploadMessage("Nada para colar.");
+      showUploadDialog("Nada para colar", "A área de transferência não contém uma imagem ou URL.");
     } catch {
-      setUploadMessage("Não foi possível ler a área de transferência.");
+      showUploadDialog(
+        "Área de transferência bloqueada",
+        "Não foi possível ler a área de transferência. Use o botão Arquivo local ou arraste a imagem para o campo.",
+      );
     }
   }
 
@@ -544,6 +616,8 @@ function ImagePathField({
   return (
     <div
       className="grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,1fr)_150px]"
+      onDragOver={(event) => event.preventDefault()}
+      onDrop={handleDrop}
       onPaste={handlePaste}
     >
       <div>
@@ -627,12 +701,79 @@ function ImagePathField({
             : "Use um caminho em /images/ ou uma URL https."}
         </p>
       )}
+      {uploadDialog && (
+        <InfoDialog
+          title={uploadDialog.title}
+          description={uploadDialog.description}
+          onClose={() => setUploadDialog(null)}
+        />
+      )}
     </div>
   );
 }
 
+function formatFileSize(bytes: number) {
+  if (bytes < 1024 * 1024) return `${Math.ceil(bytes / 1024)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 function isSupportedImageFile(file: File) {
   return ["image/png", "image/jpeg", "image/webp", "image/gif"].includes(file.type);
+}
+
+function canvasToBlob(canvas: HTMLCanvasElement, type: string, quality: number) {
+  return new Promise<Blob | null>((resolve) => {
+    canvas.toBlob(resolve, type, quality);
+  });
+}
+
+async function prepareImageForUpload(file: File) {
+  if (file.size <= targetImageUploadBytes || file.type === "image/gif") return file;
+
+  if (typeof document === "undefined" || typeof createImageBitmap === "undefined") return file;
+
+  let bitmap: ImageBitmap;
+  try {
+    bitmap = await createImageBitmap(file);
+  } catch {
+    return file;
+  }
+
+  try {
+    const canvas = document.createElement("canvas");
+    const context = canvas.getContext("2d");
+    if (!context) return file;
+
+    let bestFile: File | null = null;
+    const maxDimensions = [1800, 1500, 1200, 1000];
+    const qualities = [0.86, 0.78, 0.7, 0.62];
+
+    for (const maxDimension of maxDimensions) {
+      const scale = Math.min(1, maxDimension / Math.max(bitmap.width, bitmap.height));
+      canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+      canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+      context.clearRect(0, 0, canvas.width, canvas.height);
+      context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+
+      for (const quality of qualities) {
+        const blob = await canvasToBlob(canvas, "image/webp", quality);
+        if (!blob || blob.size >= file.size) continue;
+
+        const optimized = new File([blob], file.name.replace(/\.[^.]+$/, ".webp"), {
+          type: "image/webp",
+        });
+
+        if (!bestFile || optimized.size < bestFile.size) bestFile = optimized;
+        if (optimized.size <= targetImageUploadBytes) return optimized;
+      }
+    }
+
+    if (bestFile && bestFile.size <= targetImageUploadBytes) return bestFile;
+    if (bestFile && file.size > targetImageUploadBytes) return bestFile;
+    return file;
+  } finally {
+    bitmap.close();
+  }
 }
 
 function mimeExtension(mimeType: string) {
@@ -697,6 +838,24 @@ function DialogFrame({
         <div className="mt-5">{children}</div>
       </div>
     </div>
+  );
+}
+
+function InfoDialog({
+  title,
+  description,
+  onClose,
+}: {
+  title: string;
+  description: string;
+  onClose: () => void;
+}) {
+  return (
+    <DialogFrame title={title} description={description}>
+      <div className="flex justify-end">
+        <IconButton onClick={onClose}>Entendi</IconButton>
+      </div>
+    </DialogFrame>
   );
 }
 
@@ -1385,12 +1544,8 @@ function Editor({
   const saveContentFn = useServerFn(saveCampaignContent);
   const uploadImageFn = useServerFn(uploadCharacterImage);
   const [content, setContent] = useState<CampaignContent>(() => cloneContent(initialContent));
-  const [section, setSection] = useState<SectionKey>(
-    () => readStoredEditorState(initialContent).section,
-  );
-  const [selectedIndex, setSelectedIndex] = useState(
-    () => readStoredEditorState(initialContent).index,
-  );
+  const [section, setSection] = useState<SectionKey>("sessions");
+  const [selectedIndex, setSelectedIndex] = useState(0);
   const [draft, setDraft] = useState<DraftItem>(
     () => cloneContent(defaultCampaignContent).sessions[0] as DraftItem,
   );
@@ -1402,6 +1557,8 @@ function Editor({
   const [showNewDialog, setShowNewDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [discardAction, setDiscardAction] = useState<(() => void) | null>(null);
+  const [editorStateReady, setEditorStateReady] = useState(false);
+  const restoredEditorStateRef = useRef(false);
 
   const activeMeta = useMemo(
     () => sections.find((entry) => entry.key === section) ?? sections[0],
@@ -1427,6 +1584,16 @@ function Editor({
   }, [initialContent]);
 
   useEffect(() => {
+    if (restoredEditorStateRef.current) return;
+    const storedState = readStoredEditorState(initialContent);
+    restoredEditorStateRef.current = true;
+    setSection(storedState.section);
+    setSelectedIndex(storedState.index);
+    setEditorStateReady(true);
+  }, [initialContent]);
+
+  useEffect(() => {
+    if (!editorStateReady) return;
     if (typeof window === "undefined") return;
 
     const currentItems = getCollection(content, section);
@@ -1438,7 +1605,7 @@ function Editor({
         itemKey: getItemStorageKey(section, currentItems[selectedIndex], selectedIndex),
       }),
     );
-  }, [content, section, selectedIndex]);
+  }, [content, editorStateReady, section, selectedIndex]);
 
   useEffect(() => {
     const currentItems = getCollection(content, section);
