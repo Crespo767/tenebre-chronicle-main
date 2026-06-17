@@ -1289,6 +1289,15 @@ function Editor({
     });
   }
 
+  function handleRecordSelect(value: string) {
+    if (value === "__create__") {
+      openNewDialog();
+      return;
+    }
+
+    selectItem(Number(value));
+  }
+
   function setField(field: string, value: unknown) {
     setDraft((current) => ({ ...current, [field]: value }));
     setSavedMessage("");
@@ -1515,26 +1524,36 @@ function Editor({
                 Registro
               </span>
               <select
-                value={selectedIndex}
-                onChange={(event) => selectItem(Number(event.target.value))}
+                value={items.length === 0 ? "__create__" : selectedIndex}
+                onChange={(event) => handleRecordSelect(event.target.value)}
                 className="mt-2 h-11 w-full appearance-none rounded-sm border border-border bg-background/70 px-3 text-sm text-foreground outline-none transition-colors focus:border-[var(--gold)]/70"
               >
-                {items.map((item, index) => (
-                  <option key={`${section}-${index}`} value={index}>
-                    {getItemLabel(section, item, index)}
-                  </option>
-                ))}
+                {items.length === 0 ? (
+                  <option value="__create__">Criar novo</option>
+                ) : (
+                  items.map((item, index) => (
+                    <option key={`${section}-${index}`} value={index}>
+                      {getItemLabel(section, item, index)}
+                    </option>
+                  ))
+                )}
               </select>
             </label>
             <div className="rounded border border-border/70 bg-background/35 p-3 text-sm text-muted-foreground">
-              Este editor cobre todos os campos usados pelas páginas públicas. Para listas, use uma
-              linha por item. Slugs alteram as URLs de detalhe.
+              {items.length === 0 ? (
+                "Nenhum registro nesta seção. Selecione Criar novo ou use o botão Novo."
+              ) : (
+                <>
+                  Este editor cobre todos os campos usados pelas páginas públicas. Para listas, use
+                  uma linha por item. Slugs alteram as URLs de detalhe.
+                </>
+              )}
             </div>
           </div>
 
           {items.length === 0 ? (
             <div className="rounded border border-border/70 p-6 text-center text-muted-foreground">
-              Nenhum registro nesta seção. Use “Novo” para começar.
+              Nenhum registro nesta seção. Use "Criar novo" para começar.
             </div>
           ) : (
             <SectionForm
