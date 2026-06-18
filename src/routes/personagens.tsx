@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-router";
 import { PageContainer, SectionTitle, ChronicleCard, ImageFrame } from "../components/ui-chrome";
 import { getCampaignContent } from "../lib/api/campaign.functions";
 
@@ -17,6 +17,11 @@ export const Route = createFileRoute("/personagens")({
 
 function CharactersPage() {
   const { characters } = Route.useLoaderData();
+  const isListRoute = useRouterState({
+    select: (state) => state.location.pathname === "/personagens",
+  });
+
+  if (!isListRoute) return <Outlet />;
 
   return (
     <PageContainer>

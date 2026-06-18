@@ -19,6 +19,7 @@ import { Route as ArquivoRouteImport } from './routes/arquivo'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SessoesSlugRouteImport } from './routes/sessoes.$slug'
 import { Route as PersonagensSlugRouteImport } from './routes/personagens.$slug'
+import { Route as NpcsSlugRouteImport } from './routes/npcs.$slug'
 
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
@@ -70,16 +71,22 @@ const PersonagensSlugRoute = PersonagensSlugRouteImport.update({
   path: '/$slug',
   getParentRoute: () => PersonagensRoute,
 } as any)
+const NpcsSlugRoute = NpcsSlugRouteImport.update({
+  id: '/$slug',
+  path: '/$slug',
+  getParentRoute: () => NpcsRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/arquivo': typeof ArquivoRoute
   '/notas': typeof NotasRoute
-  '/npcs': typeof NpcsRoute
+  '/npcs': typeof NpcsRouteWithChildren
   '/painel-tenebre': typeof PainelTenebreRoute
   '/personagens': typeof PersonagensRouteWithChildren
   '/sessoes': typeof SessoesRouteWithChildren
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/npcs/$slug': typeof NpcsSlugRoute
   '/personagens/$slug': typeof PersonagensSlugRoute
   '/sessoes/$slug': typeof SessoesSlugRoute
 }
@@ -87,11 +94,12 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/arquivo': typeof ArquivoRoute
   '/notas': typeof NotasRoute
-  '/npcs': typeof NpcsRoute
+  '/npcs': typeof NpcsRouteWithChildren
   '/painel-tenebre': typeof PainelTenebreRoute
   '/personagens': typeof PersonagensRouteWithChildren
   '/sessoes': typeof SessoesRouteWithChildren
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/npcs/$slug': typeof NpcsSlugRoute
   '/personagens/$slug': typeof PersonagensSlugRoute
   '/sessoes/$slug': typeof SessoesSlugRoute
 }
@@ -100,11 +108,12 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/arquivo': typeof ArquivoRoute
   '/notas': typeof NotasRoute
-  '/npcs': typeof NpcsRoute
+  '/npcs': typeof NpcsRouteWithChildren
   '/painel-tenebre': typeof PainelTenebreRoute
   '/personagens': typeof PersonagensRouteWithChildren
   '/sessoes': typeof SessoesRouteWithChildren
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/npcs/$slug': typeof NpcsSlugRoute
   '/personagens/$slug': typeof PersonagensSlugRoute
   '/sessoes/$slug': typeof SessoesSlugRoute
 }
@@ -119,6 +128,7 @@ export interface FileRouteTypes {
     | '/personagens'
     | '/sessoes'
     | '/sitemap.xml'
+    | '/npcs/$slug'
     | '/personagens/$slug'
     | '/sessoes/$slug'
   fileRoutesByTo: FileRoutesByTo
@@ -131,6 +141,7 @@ export interface FileRouteTypes {
     | '/personagens'
     | '/sessoes'
     | '/sitemap.xml'
+    | '/npcs/$slug'
     | '/personagens/$slug'
     | '/sessoes/$slug'
   id:
@@ -143,6 +154,7 @@ export interface FileRouteTypes {
     | '/personagens'
     | '/sessoes'
     | '/sitemap.xml'
+    | '/npcs/$slug'
     | '/personagens/$slug'
     | '/sessoes/$slug'
   fileRoutesById: FileRoutesById
@@ -151,7 +163,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ArquivoRoute: typeof ArquivoRoute
   NotasRoute: typeof NotasRoute
-  NpcsRoute: typeof NpcsRoute
+  NpcsRoute: typeof NpcsRouteWithChildren
   PainelTenebreRoute: typeof PainelTenebreRoute
   PersonagensRoute: typeof PersonagensRouteWithChildren
   SessoesRoute: typeof SessoesRouteWithChildren
@@ -230,8 +242,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PersonagensSlugRouteImport
       parentRoute: typeof PersonagensRoute
     }
+    '/npcs/$slug': {
+      id: '/npcs/$slug'
+      path: '/$slug'
+      fullPath: '/npcs/$slug'
+      preLoaderRoute: typeof NpcsSlugRouteImport
+      parentRoute: typeof NpcsRoute
+    }
   }
 }
+
+interface NpcsRouteChildren {
+  NpcsSlugRoute: typeof NpcsSlugRoute
+}
+
+const NpcsRouteChildren: NpcsRouteChildren = {
+  NpcsSlugRoute: NpcsSlugRoute,
+}
+
+const NpcsRouteWithChildren = NpcsRoute._addFileChildren(NpcsRouteChildren)
 
 interface PersonagensRouteChildren {
   PersonagensSlugRoute: typeof PersonagensSlugRoute
@@ -260,7 +289,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ArquivoRoute: ArquivoRoute,
   NotasRoute: NotasRoute,
-  NpcsRoute: NpcsRoute,
+  NpcsRoute: NpcsRouteWithChildren,
   PainelTenebreRoute: PainelTenebreRoute,
   PersonagensRoute: PersonagensRouteWithChildren,
   SessoesRoute: SessoesRouteWithChildren,
