@@ -1,3 +1,16 @@
+export type Companion = {
+  name: string;
+  type: string;
+  status: string;
+  description: string;
+};
+
+export type ImageFraming = {
+  imagePositionX?: number;
+  imagePositionY?: number;
+  imageScale?: number;
+};
+
 export type Character = {
   slug: string;
   name: string;
@@ -11,7 +24,8 @@ export type Character = {
   appearance: string;
   goal: string;
   history: string;
-};
+  companions?: Companion[];
+} & ImageFraming;
 
 export const characters: Character[] = [
   {
@@ -29,6 +43,7 @@ export const characters: Character[] = [
     goal: "Proteger os sobreviventes que confiaram nele e conduzi-los até Ambria em segurança. Sebastian deseja manter viva sua fé em Prios sem fechar os olhos para os erros da Igreja. Mais do que buscar glória ou influência para sua família, ele quer provar que a misericórdia ainda pode existir.",
     history:
       "Sebastian nasceu na Casa Valerius, uma antiga família nobre de Alberetor ligada à Igreja de Prios. Desde pequeno foi preparado para servir ao Deus Sol, mas sua família nunca lhe ensinou obediência cega. Ele aprendeu que a fé podia iluminar, curar e proteger, mas também podia ser usada por homens cruéis como desculpa para injustiça. Sua formação uniu preces, estudos, escudo e espada. Nos campos de refugiados de Alberetor, viu fome, morte, corrupção e abandono. Quando Alberetor já não podia mais ser salvo, reuniu sobreviventes que confiavam nele e partiu rumo a Ambria.",
+    companions: [],
   },
   {
     slug: "lysandra-verdan",
@@ -45,5 +60,6 @@ export const characters: Character[] = [
     goal: "Sobreviver à travessia, proteger aqueles que ainda importam e descobrir se os presságios que carrega são aviso, maldição ou destino.",
     history:
       "Durante a travessia de Alberetor, Lysandra aprendeu a caçar pequenas presas para ajudar sua família a suportar a fome. Desde então, aperfeiçoou sua pontaria e passou a carregar um arco longo de madeira escura, entalhado com símbolos protetores. Ao lado da aljava, leva uma bolsa de couro com cartas, ervas secas, velas e pequenos objetos usados em rituais. Muitos a veem apenas como uma arqueira da caravana, mas há mais nela do que aparenta.",
+    companions: [],
   },
 ];

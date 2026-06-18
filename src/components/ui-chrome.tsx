@@ -1,5 +1,10 @@
 import type { ReactNode } from "react";
 
+function clamp(value: number | undefined, fallback: number, min: number, max: number) {
+  if (typeof value !== "number" || !Number.isFinite(value)) return fallback;
+  return Math.min(max, Math.max(min, value));
+}
+
 export function PageContainer({
   children,
   className = "",
@@ -76,13 +81,23 @@ export function ImageFrame({
   ratio = "4/5",
   priority = false,
   className = "",
+  positionX = 50,
+  positionY = 50,
+  scale = 1,
 }: {
   src: string;
   alt: string;
   ratio?: string;
   priority?: boolean;
   className?: string;
+  positionX?: number;
+  positionY?: number;
+  scale?: number;
 }) {
+  const x = clamp(positionX, 50, 0, 100);
+  const y = clamp(positionY, 50, 0, 100);
+  const zoom = clamp(scale, 1, 1, 3);
+
   return (
     <div
       className={`relative overflow-hidden rounded border border-[var(--gold)]/30 bg-[oklch(0.18_0.012_95)] ${className}`}
@@ -94,6 +109,11 @@ export function ImageFrame({
         loading={priority ? "eager" : "lazy"}
         decoding="async"
         className="absolute inset-0 h-full w-full object-cover opacity-90"
+        style={{
+          objectPosition: `${x}% ${y}%`,
+          transform: `scale(${zoom})`,
+          transformOrigin: `${x}% ${y}%`,
+        }}
         onError={(e) => {
           (e.currentTarget as HTMLImageElement).style.display = "none";
         }}

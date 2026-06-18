@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { CompanionsSection } from "../components/companions-section";
 import { PageContainer, ImageFrame, StatusBadge } from "../components/ui-chrome";
 import { getCampaignContent } from "../lib/api/campaign.functions";
 
@@ -45,7 +46,15 @@ function NpcDetail() {
       <div className="mt-6 grid grid-cols-1 gap-8 md:grid-cols-[280px_1fr]">
         {npc.image && (
           <div>
-            <ImageFrame src={npc.image} alt={npc.name} ratio="3/4" priority />
+            <ImageFrame
+              src={npc.image}
+              alt={npc.name}
+              ratio="3/4"
+              priority
+              positionX={npc.imagePositionX}
+              positionY={npc.imagePositionY}
+              scale={npc.imageScale}
+            />
           </div>
         )}
 
@@ -77,6 +86,7 @@ function NpcDetail() {
             <div className="gold-rule mt-2 w-16" />
             <p className="mt-3 leading-relaxed text-foreground/90">{npc.summary}</p>
           </section>
+          <CompanionsSection companions={npc.companions} />
         </article>
       </div>
     </PageContainer>

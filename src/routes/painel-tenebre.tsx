@@ -30,6 +30,7 @@ import {
   defaultCampaignContent,
   uniqueSlug,
   type CampaignContent,
+  type Companion,
 } from "../lib/campaign-content";
 import {
   getAdminCampaignContent,
@@ -196,6 +197,10 @@ function createItem(section: SectionKey, content: CampaignContent): DraftItem {
       appearance: "",
       goal: "",
       history: "",
+      companions: [],
+      imagePositionX: 50,
+      imagePositionY: 50,
+      imageScale: 1,
     };
   }
 
@@ -212,6 +217,10 @@ function createItem(section: SectionKey, content: CampaignContent): DraftItem {
       relation: "",
       status: "Vivo",
       summary: "",
+      companions: [],
+      imagePositionX: 50,
+      imagePositionY: 50,
+      imageScale: 1,
     };
   }
 
@@ -245,6 +254,45 @@ function fromLines(value: string) {
     .split("\n")
     .map((item) => item.trim())
     .filter(Boolean);
+}
+
+function companionLines(value: unknown) {
+  if (!Array.isArray(value)) return "";
+
+  return value
+    .map((item) => {
+      const companion = item as Partial<Companion>;
+      return [
+        companion.name ?? "",
+        companion.type ?? "",
+        companion.status ?? "",
+        companion.description ?? "",
+      ].join(" | ");
+    })
+    .join("\n");
+}
+
+function companionsFromLines(value: string): Companion[] {
+  return fromLines(value)
+    .map((line) => {
+      const [name = "", type = "", status = "", ...descriptionParts] = line
+        .split("|")
+        .map((part) => part.trim());
+
+      return {
+        name,
+        type,
+        status,
+        description: descriptionParts.join(" | "),
+      };
+    })
+    .filter(
+      (item) =>
+        item.name.length > 0 ||
+        item.type.length > 0 ||
+        item.status.length > 0 ||
+        item.description.length > 0,
+    );
 }
 
 function Field({
@@ -293,6 +341,51 @@ function NumberField({
   );
 }
 
+function clampNumber(value: unknown, fallback: number, min: number, max: number) {
+  const numberValue = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(numberValue)) return fallback;
+  return Math.min(max, Math.max(min, numberValue));
+}
+
+function RangeField({
+  label,
+  value,
+  min,
+  max,
+  step = 1,
+  suffix = "",
+  onChange,
+}: {
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  step?: number;
+  suffix?: string;
+  onChange: (value: number) => void;
+}) {
+  return (
+    <label className="block">
+      <span className="flex items-center justify-between gap-3 text-xs uppercase tracking-[0.22em] text-[var(--gold)]/80">
+        <span>{label}</span>
+        <span className="tracking-normal text-muted-foreground">
+          {value.toFixed(step < 1 ? 1 : 0)}
+          {suffix}
+        </span>
+      </span>
+      <input
+        type="range"
+        min={min}
+        max={max}
+        step={step}
+        value={value}
+        onChange={(event) => onChange(Number(event.target.value))}
+        className="mt-2 h-2 w-full accent-[var(--gold)]"
+      />
+    </label>
+  );
+}
+
 function TextAreaField({
   label,
   value,
@@ -336,6 +429,24 @@ function LinesField({
       onChange={(nextValue) => onChange(fromLines(nextValue))}
       rows={4}
       help="Um item por linha."
+    />
+  );
+}
+
+function CompanionLinesField({
+  value,
+  onChange,
+}: {
+  value: unknown;
+  onChange: (value: Companion[]) => void;
+}) {
+  return (
+    <TextAreaField
+      label="Companheiros"
+      value={companionLines(value)}
+      onChange={(nextValue) => onChange(companionsFromLines(nextValue))}
+      rows={5}
+      help="Uma linha por companheiro: Nome | Tipo | Status | Descrição."
     />
   );
 }
@@ -448,6 +559,10 @@ function ImagePathField({
   value,
   onChange,
   onUpload,
+  imagePositionX,
+  imagePositionY,
+  imageScale,
+  onFramingChange,
   label = "Imagem",
   help = "Use uma URL https, um caminho em /images/ ou envie uma imagem.",
   previewAlt = "Prévia da imagem",
@@ -457,6 +572,14 @@ function ImagePathField({
   value: unknown;
   onChange: (value: string) => void;
   onUpload?: (file: File) => Promise<string>;
+  imagePositionX?: unknown;
+  imagePositionY?: unknown;
+  imageScale?: unknown;
+  onFramingChange?: (framing: {
+    imagePositionX: number;
+    imagePositionY: number;
+    imageScale: number;
+  }) => void;
   label?: string;
   help?: string;
   previewAlt?: string;
@@ -464,6 +587,9 @@ function ImagePathField({
   ratio?: string;
 }) {
   const path = String(value ?? "").trim();
+  const x = clampNumber(imagePositionX, 50, 0, 100);
+  const y = clampNumber(imagePositionY, 50, 0, 100);
+  const zoom = clampNumber(imageScale, 1, 1, 3);
   const [previewFailed, setPreviewFailed] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadMessage, setUploadMessage] = useState("");
@@ -512,6 +638,7 @@ function ImagePathField({
       }
       const url = await onUpload(uploadFile);
       onChange(url);
+      onFramingChange?.({ imagePositionX: 50, imagePositionY: 50, imageScale: 1 });
       setUploadMessage("Imagem enviada.");
     } catch (error) {
       showUploadDialog(
@@ -609,8 +736,17 @@ function ImagePathField({
 
   function removeImage() {
     onChange("");
+    onFramingChange?.({ imagePositionX: 50, imagePositionY: 50, imageScale: 1 });
     setPreviewFailed(false);
     setUploadMessage("Imagem removida.");
+  }
+
+  function setFraming(next: Partial<{ imagePositionX: number; imagePositionY: number; imageScale: number }>) {
+    onFramingChange?.({
+      imagePositionX: next.imagePositionX ?? x,
+      imagePositionY: next.imagePositionY ?? y,
+      imageScale: next.imageScale ?? zoom,
+    });
   }
 
   return (
@@ -670,6 +806,45 @@ function ImagePathField({
             {uploadMessage && <p className="text-sm text-muted-foreground">{uploadMessage}</p>}
           </div>
         )}
+        {path && onFramingChange && (
+          <div className="mt-5 grid grid-cols-1 gap-4 rounded border border-border/70 bg-background/35 p-4 sm:grid-cols-3">
+            <RangeField
+              label="Horizontal"
+              value={x}
+              min={0}
+              max={100}
+              suffix="%"
+              onChange={(nextValue) => setFraming({ imagePositionX: nextValue })}
+            />
+            <RangeField
+              label="Vertical"
+              value={y}
+              min={0}
+              max={100}
+              suffix="%"
+              onChange={(nextValue) => setFraming({ imagePositionY: nextValue })}
+            />
+            <RangeField
+              label="Zoom"
+              value={zoom}
+              min={1}
+              max={3}
+              step={0.1}
+              suffix="x"
+              onChange={(nextValue) => setFraming({ imageScale: nextValue })}
+            />
+            <button
+              type="button"
+              onClick={() =>
+                onFramingChange({ imagePositionX: 50, imagePositionY: 50, imageScale: 1 })
+              }
+              className={`${buttonBase} border-border/80 bg-background/55 text-foreground hover:border-[var(--gold)]/50 hover:bg-[var(--gold)]/10 sm:col-span-3`}
+            >
+              <RotateCcw className="h-4 w-4" />
+              Restaurar enquadramento
+            </button>
+          </div>
+        )}
       </div>
       <div className="overflow-hidden rounded border border-border/70 bg-background/55">
         {path && !previewFailed ? (
@@ -677,7 +852,12 @@ function ImagePathField({
             src={path}
             alt={previewAlt}
             className="aspect-[3/4] w-full object-cover"
-            style={{ aspectRatio: ratio }}
+            style={{
+              aspectRatio: ratio,
+              objectPosition: `${x}% ${y}%`,
+              transform: `scale(${zoom})`,
+              transformOrigin: `${x}% ${y}%`,
+            }}
             onError={(event) => {
               event.currentTarget.style.display = "none";
               setPreviewFailed(true);
@@ -1241,6 +1421,14 @@ function SectionForm({
             value={draft.image}
             onChange={(value) => setField("image", value)}
             onUpload={uploadImage}
+            imagePositionX={draft.imagePositionX}
+            imagePositionY={draft.imagePositionY}
+            imageScale={draft.imageScale}
+            onFramingChange={(framing) => {
+              setField("imagePositionX", framing.imagePositionX);
+              setField("imagePositionY", framing.imagePositionY);
+              setField("imageScale", framing.imageScale);
+            }}
             previewAlt="Prévia da imagem do personagem"
           />
         </FormSection>
@@ -1277,6 +1465,16 @@ function SectionForm({
               />
             </div>
           </div>
+        </FormSection>
+
+        <FormSection
+          title="Companheiros"
+          description="Servos, animais, familiares, montarias ou outros vínculos ligados ao personagem."
+        >
+          <CompanionLinesField
+            value={draft.companions}
+            onChange={(value) => setField("companions", value)}
+          />
         </FormSection>
       </div>
     );
@@ -1317,6 +1515,14 @@ function SectionForm({
             value={draft.image}
             onChange={(value) => setField("image", value)}
             onUpload={uploadImage}
+            imagePositionX={draft.imagePositionX}
+            imagePositionY={draft.imagePositionY}
+            imageScale={draft.imageScale}
+            onFramingChange={(framing) => {
+              setField("imagePositionX", framing.imagePositionX);
+              setField("imagePositionY", framing.imagePositionY);
+              setField("imageScale", framing.imageScale);
+            }}
             previewAlt="Prévia da imagem do NPC"
           />
         </FormSection>
@@ -1326,6 +1532,16 @@ function SectionForm({
             label="Resumo"
             value={draft.summary}
             onChange={(value) => setField("summary", value)}
+          />
+        </FormSection>
+
+        <FormSection
+          title="Companheiros"
+          description="Servos, animais, familiares, montarias ou outros vínculos ligados ao NPC."
+        >
+          <CompanionLinesField
+            value={draft.companions}
+            onChange={(value) => setField("companions", value)}
           />
         </FormSection>
       </div>

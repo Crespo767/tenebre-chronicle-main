@@ -1,10 +1,15 @@
 import { archive as defaultArchive, type ArchiveItem } from "../data/archive";
-import { characters as defaultCharacters, type Character } from "../data/characters";
+import {
+  characters as defaultCharacters,
+  type Character,
+  type Companion,
+  type ImageFraming,
+} from "../data/characters";
 import { masterNotes as defaultMasterNotes, type MasterNote } from "../data/masterNotes";
 import { npcs as defaultNpcs, type Npc } from "../data/npcs";
 import { sessions as defaultSessions, type Session } from "../data/sessions";
 
-export type { ArchiveItem, Character, MasterNote, Npc, Session };
+export type { ArchiveItem, Character, Companion, ImageFraming, MasterNote, Npc, Session };
 
 export type CampaignContent = {
   sessions: Session[];

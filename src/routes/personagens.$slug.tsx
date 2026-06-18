@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { CompanionsSection } from "../components/companions-section";
 import { PageContainer, ImageFrame, StatusBadge } from "../components/ui-chrome";
 import { getCampaignContent } from "../lib/api/campaign.functions";
 
@@ -47,7 +48,15 @@ function CharacterDetail() {
 
       <div className="mt-6 grid grid-cols-1 gap-8 md:grid-cols-[280px_1fr]">
         <div>
-          <ImageFrame src={c.image} alt={c.name} ratio="3/4" priority />
+          <ImageFrame
+            src={c.image}
+            alt={c.name}
+            ratio="3/4"
+            priority
+            positionX={c.imagePositionX}
+            positionY={c.imagePositionY}
+            scale={c.imageScale}
+          />
           <div className="mt-4 space-y-2 text-sm">
             <p className="text-muted-foreground">
               <span className="text-foreground">Ocupação:</span> {c.role}
@@ -89,6 +98,7 @@ function CharacterDetail() {
           <Section title="Histórico">
             <p>{c.history}</p>
           </Section>
+          <CompanionsSection companions={c.companions} />
         </article>
       </div>
     </PageContainer>

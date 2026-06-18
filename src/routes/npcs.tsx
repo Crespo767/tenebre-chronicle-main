@@ -49,7 +49,15 @@ function NpcsPage() {
             <Link to="/npcs/$slug" params={{ slug: n.slug }} className="block">
               <ChronicleCard as="article" className="h-full">
                 {n.image && (
-                  <ImageFrame src={n.image} alt={n.name} ratio="3/4" className="mb-4" />
+                  <ImageFrame
+                    src={n.image}
+                    alt={n.name}
+                    ratio="3/4"
+                    className="mb-4"
+                    positionX={n.imagePositionX}
+                    positionY={n.imagePositionY}
+                    scale={n.imageScale}
+                  />
                 )}
                 <div className="flex items-start justify-between gap-3">
                   <h2 className="font-display text-xl text-foreground">{n.name}</h2>

@@ -1,3 +1,5 @@
+import type { Companion, ImageFraming } from "./characters";
+
 export type Npc = {
   slug: string;
   name: string;
@@ -7,7 +9,8 @@ export type Npc = {
   relation: string;
   status: string;
   summary: string;
-};
+  companions?: Companion[];
+} & ImageFraming;
 
 export const npcs: Npc[] = [
   {
@@ -20,6 +23,7 @@ export const npcs: Npc[] = [
     status: "Viva",
     summary:
       "Sacerdotisa de meia-idade, calma, de mãos calejadas. Acredita que a Igreja perdeu o caminho, mas não a fé. Cuida dos doentes e mantém o coro nas noites mais frias.",
+    companions: [],
   },
   {
     slug: "capitao-draven",
@@ -31,6 +35,7 @@ export const npcs: Npc[] = [
     status: "Vivo",
     summary:
       "Oficial endurecido, rosto marcado por uma queimadura antiga. Cumpre ordens sem perguntar e despreza nobres que ainda usam o nome de Alberetor.",
+    companions: [],
   },
   {
     slug: "orik-mao-partida",
@@ -42,6 +47,7 @@ export const npcs: Npc[] = [
     status: "Vivo",
     summary:
       "Homem largo, mão direita torta de uma fratura mal curada. Fala pouco, ri menos, e bate o martelo como se cada golpe pagasse uma dívida antiga.",
+    companions: [],
   },
   {
     slug: "elira-dos-vales",
@@ -53,6 +59,7 @@ export const npcs: Npc[] = [
     status: "Paradeiro desconhecido",
     summary:
       "Mulher magra de olhos demasiado claros. Trocou cartas com Lysandra à beira de uma fogueira e desapareceu antes da manhã.",
+    companions: [],
   },
   {
     slug: "padre-halbrecht",
@@ -64,5 +71,6 @@ export const npcs: Npc[] = [
     status: "Desaparecido",
     summary:
       "Mestre de Sebastian em fé e em dúvida. Ensinou que o Sol não pertence aos homens que o invocam. Visto pela última vez carregando crianças para fora de um convento em chamas.",
+    companions: [],
   },
 ];

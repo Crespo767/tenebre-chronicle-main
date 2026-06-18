@@ -29,6 +29,14 @@ const SCRYPT_OPTIONS = {
 let contentCache: { content: CampaignContent; expiresAt: number } | null = null;
 
 const stringArraySchema = z.array(z.string());
+const companionSchema = z.object({
+  name: z.string(),
+  type: z.string(),
+  status: z.string(),
+  description: z.string(),
+});
+const imagePositionSchema = z.number().min(0).max(100).optional();
+const imageScaleSchema = z.number().min(1).max(3).optional();
 
 const campaignContentSchema = z.object({
   sessions: z.array(
@@ -61,6 +69,10 @@ const campaignContentSchema = z.object({
       appearance: z.string(),
       goal: z.string(),
       history: z.string(),
+      companions: z.array(companionSchema).optional(),
+      imagePositionX: imagePositionSchema,
+      imagePositionY: imagePositionSchema,
+      imageScale: imageScaleSchema,
     }),
   ),
   npcs: z.array(
@@ -73,6 +85,10 @@ const campaignContentSchema = z.object({
       relation: z.string(),
       status: z.string(),
       summary: z.string(),
+      companions: z.array(companionSchema).optional(),
+      imagePositionX: imagePositionSchema,
+      imagePositionY: imagePositionSchema,
+      imageScale: imageScaleSchema,
     }),
   ),
   archive: z.array(
@@ -162,9 +178,34 @@ function asNumber(row: Record<string, unknown>, key: string, fallback = 0) {
   return typeof value === "number" ? value : fallback;
 }
 
+function asBoundedNumber(row: Record<string, unknown>, key: string, fallback: number, min: number, max: number) {
+  const value = row[key];
+  const numberValue = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(numberValue)) return fallback;
+  return Math.min(max, Math.max(min, numberValue));
+}
+
 function asStringArray(row: Record<string, unknown>, key: string) {
   const value = row[key];
   return Array.isArray(value) ? value.map((item) => String(item)) : [];
+}
+
+function asCompanions(row: Record<string, unknown>, key: string) {
+  const value = row[key];
+  if (!Array.isArray(value)) return [];
+
+  return value
+    .filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === "object")
+    .map((item) => ({
+      name: asString(item, "name"),
+      type: asString(item, "type"),
+      status: asString(item, "status"),
+      description: asString(item, "description"),
+    }))
+    .filter(
+      (item) =>
+        item.name.trim() || item.type.trim() || item.status.trim() || item.description.trim(),
+    );
 }
 
 function mapSession(row: Record<string, unknown>) {
@@ -198,6 +239,10 @@ function mapCharacter(row: Record<string, unknown>) {
     appearance: asString(row, "appearance"),
     goal: asString(row, "goal"),
     history: asString(row, "history"),
+    companions: asCompanions(row, "companions"),
+    imagePositionX: asBoundedNumber(row, "image_position_x", 50, 0, 100),
+    imagePositionY: asBoundedNumber(row, "image_position_y", 50, 0, 100),
+    imageScale: asBoundedNumber(row, "image_scale", 1, 1, 3),
   };
 }
 
@@ -211,6 +256,10 @@ function mapNpc(row: Record<string, unknown>) {
     relation: asString(row, "relation"),
     status: asString(row, "status"),
     summary: asString(row, "summary"),
+    companions: asCompanions(row, "companions"),
+    imagePositionX: asBoundedNumber(row, "image_position_x", 50, 0, 100),
+    imagePositionY: asBoundedNumber(row, "image_position_y", 50, 0, 100),
+    imageScale: asBoundedNumber(row, "image_scale", 1, 1, 3),
   };
 }
 
@@ -351,6 +400,10 @@ async function saveCampaignContentToDb(content: CampaignContent) {
         appearance: character.appearance,
         goal: character.goal,
         history: character.history,
+        companions: character.companions ?? [],
+        image_position_x: character.imagePositionX ?? 50,
+        image_position_y: character.imagePositionY ?? 50,
+        image_scale: character.imageScale ?? 1,
         order_index: index + 1,
       })),
     ),
@@ -366,6 +419,10 @@ async function saveCampaignContentToDb(content: CampaignContent) {
         relation: npc.relation,
         status: npc.status,
         summary: npc.summary,
+        companions: npc.companions ?? [],
+        image_position_x: npc.imagePositionX ?? 50,
+        image_position_y: npc.imagePositionY ?? 50,
+        image_scale: npc.imageScale ?? 1,
         order_index: index + 1,
       })),
     ),
