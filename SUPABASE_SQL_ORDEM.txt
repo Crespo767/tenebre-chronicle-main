@@ -1,0 +1,44 @@
+ORDEM PARA RODAR NO SUPABASE SQL EDITOR
+
+1. Abra este arquivo do projeto:
+
+supabase/migrations/20260618120000_harden_admin_and_campaign_writes.sql
+
+2. Copie TODO o conteudo desse arquivo e rode no Supabase SQL Editor.
+
+Esse SQL cria:
+- tabela public.admin_login_attempts
+- funcao public.register_admin_user
+- funcao public.get_admin_login_lock
+- funcao public.record_admin_login_failure
+- funcao public.clear_admin_login_attempts
+- funcao public.save_campaign_content
+- permissoes restritas para service_role
+
+3. Depois que o SQL acima rodar sem erro, rode este bloco de verificacao no SQL Editor:
+
+select
+  to_regclass('public.admin_login_attempts') as admin_login_attempts_table,
+  to_regprocedure('public.register_admin_user(text,text,text,integer)') as register_admin_user_fn,
+  to_regprocedure('public.get_admin_login_lock(text)') as get_admin_login_lock_fn,
+  to_regprocedure('public.record_admin_login_failure(text)') as record_admin_login_failure_fn,
+  to_regprocedure('public.clear_admin_login_attempts(text)') as clear_admin_login_attempts_fn,
+  to_regprocedure('public.save_campaign_content(jsonb)') as save_campaign_content_fn;
+
+4. O resultado esperado e que todas as colunas voltem preenchidas, sem null.
+
+5. Rode este teste rapido do rate limit:
+
+select * from public.get_admin_login_lock('teste-manual');
+select public.record_admin_login_failure('teste-manual');
+select * from public.get_admin_login_lock('teste-manual');
+select public.clear_admin_login_attempts('teste-manual');
+select * from public.get_admin_login_lock('teste-manual');
+
+6. Resultado esperado do teste:
+- primeira consulta: locked = false
+- depois de registrar uma falha: locked ainda deve ser false
+- depois de limpar: locked = false novamente
+
+7. Se tudo acima rodar sem erro, o banco esta pronto para receber a versao nova do app.
+

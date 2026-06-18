@@ -35,7 +35,12 @@ function CharactersPage() {
           <li key={c.slug}>
             <Link to="/personagens/$slug" params={{ slug: c.slug }} className="block">
               <ChronicleCard as="article" className="h-full">
-                <ImageFrame src={c.image} alt={c.name} ratio="3/4" />
+                <ImageFrame
+                  src={c.image}
+                  alt={c.name}
+                  ratio="3/4"
+                  grayscale={isDeadStatus(c.status)}
+                />
                 <h2 className="mt-4 font-display text-2xl text-foreground">{c.name}</h2>
                 <p className="text-sm text-[var(--gold)]/80">{c.role}</p>
                 <p className="mt-1 text-xs uppercase tracking-widest text-muted-foreground">
@@ -51,5 +56,12 @@ function CharactersPage() {
         ))}
       </ul>
     </PageContainer>
+  );
+}
+
+function isDeadStatus(status: string) {
+  const normalized = status.toLowerCase();
+  return (
+    normalized.includes("mort") || normalized.includes("falec") || normalized.includes("morreu")
   );
 }

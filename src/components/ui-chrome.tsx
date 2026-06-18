@@ -75,12 +75,14 @@ export function ImageFrame({
   alt,
   ratio = "4/5",
   priority = false,
+  grayscale = false,
   className = "",
 }: {
   src: string;
   alt: string;
   ratio?: string;
   priority?: boolean;
+  grayscale?: boolean;
   className?: string;
 }) {
   return (
@@ -93,7 +95,9 @@ export function ImageFrame({
         alt={alt}
         loading={priority ? "eager" : "lazy"}
         decoding="async"
-        className="absolute inset-0 h-full w-full object-cover opacity-90"
+        className={`absolute inset-0 h-full w-full object-cover opacity-90 ${
+          grayscale ? "grayscale" : ""
+        }`}
         onError={(e) => {
           (e.currentTarget as HTMLImageElement).style.display = "none";
         }}

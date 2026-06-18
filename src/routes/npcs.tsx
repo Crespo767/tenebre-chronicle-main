@@ -48,9 +48,7 @@ function NpcsPage() {
           <li key={n.slug}>
             <Link to="/npcs/$slug" params={{ slug: n.slug }} className="block">
               <ChronicleCard as="article" className="h-full">
-                {n.image && (
-                  <ImageFrame src={n.image} alt={n.name} ratio="3/4" className="mb-4" />
-                )}
+                {n.image && <ImageFrame src={n.image} alt={n.name} ratio="3/4" className="mb-4" />}
                 <div className="flex items-start justify-between gap-3">
                   <h2 className="font-display text-xl text-foreground">{n.name}</h2>
                   <StatusBadge tone={tone(n.status)}>{n.status}</StatusBadge>
