@@ -12,9 +12,9 @@ export const Route = createFileRoute("/npcs")({
   loader: () => getCampaignContent(),
   head: () => ({
     meta: [
-      { title: "NPCs — Tenebre" },
+      { title: "NPCs | Tenebre" },
       { name: "description", content: "Rostos cruzados na caravana e nas estradas." },
-      { property: "og:title", content: "NPCs — Tenebre" },
+      { property: "og:title", content: "NPCs | Tenebre" },
       { property: "og:description", content: "Aliados, suspeitos e inimigos da crônica." },
     ],
   }),
@@ -41,7 +41,7 @@ function NpcsPage() {
       <SectionTitle
         eyebrow="Coadjuvantes"
         title="NPCs"
-        subtitle="Aliados, suspeitos, inimigos — às vezes os três."
+        subtitle="Aliados, suspeitos, inimigos, às vezes os três."
       />
       <ul className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
         {npcs.map((n) => (
