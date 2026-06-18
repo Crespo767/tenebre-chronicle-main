@@ -6,9 +6,9 @@ export const Route = createFileRoute("/personagens")({
   loader: () => getCampaignContent(),
   head: () => ({
     meta: [
-      { title: "Personagens — Tenebre" },
+      { title: "Personagens | Tenebre" },
       { name: "description", content: "Personagens dos jogadores da campanha Tenebre." },
-      { property: "og:title", content: "Personagens — Tenebre" },
+      { property: "og:title", content: "Personagens | Tenebre" },
       { property: "og:description", content: "Quem ainda caminha com a caravana." },
     ],
   }),
@@ -26,9 +26,9 @@ function CharactersPage() {
   return (
     <PageContainer>
       <SectionTitle
-        eyebrow="A Caravana"
+        eyebrow="Grupo"
         title="Personagens"
-        subtitle="Os que ainda caminham, e o que carregam."
+        subtitle="Quem segue junto quando a estrada cobra seu preço."
       />
       <ul className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {characters.map((c) => (
