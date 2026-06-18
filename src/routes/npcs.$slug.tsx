@@ -74,9 +74,7 @@ function NpcDetail() {
               <dd className="mt-2 text-foreground/90">{npc.location}</dd>
             </div>
             <div className="rounded border border-border/70 bg-background/35 p-4">
-              <dt className="text-xs uppercase tracking-[0.22em] text-[var(--gold)]/80">
-                Relação
-              </dt>
+              <dt className="text-xs uppercase tracking-[0.22em] text-[var(--gold)]/80">Relação</dt>
               <dd className="mt-2 text-foreground/90">{npc.relation}</dd>
             </div>
           </dl>

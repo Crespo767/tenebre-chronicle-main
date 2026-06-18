@@ -20,6 +20,8 @@ const SESSION_COOKIE = "tenebre_admin_session";
 const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 7;
 const SCRYPT_KEY_LENGTH = 64;
 const CONTENT_CACHE_TTL_MS = 10_000;
+const ADMIN_LOGIN_LOCK_MESSAGE =
+  "Muitas tentativas de login. Aguarde alguns minutos e tente novamente.";
 const SCRYPT_OPTIONS = {
   N: 8192,
   r: 8,
@@ -327,129 +329,77 @@ async function readCampaignContent(allowCache = true): Promise<CampaignContent> 
   return content;
 }
 
-function rowKey(row: Record<string, unknown>, keyColumns: string[]) {
-  return keyColumns.map((column) => String(row[column] ?? "")).join("\u001f");
-}
-
-async function deleteRow(table: string, keyColumns: string[], row: Record<string, unknown>) {
-  const supabase = await getSupabase();
-  let query = supabase.from(table).delete();
-
-  for (const column of keyColumns) {
-    query = query.eq(column, row[column]);
-  }
-
-  const { error } = await query;
-  if (error) throw new Error(error.message);
-}
-
-async function syncTable(table: string, keyColumns: string[], rows: Record<string, unknown>[]) {
-  const supabase = await getSupabase();
-  const selected = await supabase.from(table).select(keyColumns.join(","));
-  if (selected.error) throw new Error(selected.error.message);
-
-  if (rows.length) {
-    const saved = await supabase.from(table).upsert(rows, {
-      onConflict: keyColumns.join(","),
-    });
-    if (saved.error) throw new Error(saved.error.message);
-  }
-
-  const incomingKeys = new Set(rows.map((row) => rowKey(row, keyColumns)));
-  const obsoleteRows = ((selected.data ?? []) as Record<string, unknown>[]).filter(
-    (row) => !incomingKeys.has(rowKey(row, keyColumns)),
-  );
-
-  await Promise.all(obsoleteRows.map((row) => deleteRow(table, keyColumns, row)));
-}
-
 async function saveCampaignContentToDb(content: CampaignContent) {
-  await Promise.all([
-    syncTable(
-      "campaign_sessions",
-      ["number"],
-      content.sessions.map((session, index) => ({
-        slug: session.slug,
-        number: session.number,
-        title: session.title,
-        session_date: session.date,
-        present: session.present,
-        summary: session.summary,
-        events: session.events,
-        npcs: session.npcs,
-        locations: session.locations,
-        consequences: session.consequences,
-        hooks: session.hooks,
-        master_notes: session.masterNotes,
-        order_index: index + 1,
-      })),
-    ),
-    syncTable(
-      "campaign_characters",
-      ["slug"],
-      content.characters.map((character, index) => ({
-        slug: character.slug,
-        name: character.name,
-        role: character.role,
-        people: character.people,
-        shadow: character.shadow ?? null,
-        quote: character.quote,
-        image: character.image,
-        player: character.player ?? null,
-        status: character.status,
-        appearance: character.appearance,
-        goal: character.goal,
-        history: character.history,
-        companions: character.companions ?? [],
-        image_position_x: character.imagePositionX ?? 50,
-        image_position_y: character.imagePositionY ?? 50,
-        image_scale: character.imageScale ?? 1,
-        order_index: index + 1,
-      })),
-    ),
-    syncTable(
-      "campaign_npcs",
-      ["slug"],
-      content.npcs.map((npc, index) => ({
-        slug: npc.slug,
-        name: npc.name,
-        image: npc.image ?? "",
-        role: npc.role,
-        location: npc.location,
-        relation: npc.relation,
-        status: npc.status,
-        summary: npc.summary,
-        companions: npc.companions ?? [],
-        image_position_x: npc.imagePositionX ?? 50,
-        image_position_y: npc.imagePositionY ?? 50,
-        image_scale: npc.imageScale ?? 1,
-        order_index: index + 1,
-      })),
-    ),
-    syncTable(
-      "campaign_archive_items",
-      ["slug"],
-      content.archive.map((item, index) => ({
-        slug: item.slug,
-        title: item.title,
-        type: item.type,
-        discovered: item.discovered,
-        description: item.description,
-        link: item.link || null,
-        order_index: index + 1,
-      })),
-    ),
-    syncTable(
-      "campaign_master_notes",
-      ["title", "note_date"],
-      content.masterNotes.map((note, index) => ({
-        title: note.title,
-        note_date: note.date,
-        body: note.body,
-        order_index: index + 1,
-      })),
-    ),
-  ]);
+  const supabase = await getSupabase();
+  const payload = {
+    sessions: content.sessions.map((session, index) => ({
+      slug: session.slug,
+      number: session.number,
+      title: session.title,
+      date: session.date,
+      present: session.present,
+      summary: session.summary,
+      events: session.events,
+      npcs: session.npcs,
+      locations: session.locations,
+      consequences: session.consequences,
+      hooks: session.hooks,
+      masterNotes: session.masterNotes,
+      order_index: index + 1,
+    })),
+    characters: content.characters.map((character, index) => ({
+      slug: character.slug,
+      name: character.name,
+      role: character.role,
+      people: character.people,
+      shadow: character.shadow ?? null,
+      quote: character.quote,
+      image: character.image,
+      player: character.player ?? null,
+      status: character.status,
+      appearance: character.appearance,
+      goal: character.goal,
+      history: character.history,
+      companions: character.companions ?? [],
+      imagePositionX: character.imagePositionX ?? 50,
+      imagePositionY: character.imagePositionY ?? 50,
+      imageScale: character.imageScale ?? 1,
+      order_index: index + 1,
+    })),
+    npcs: content.npcs.map((npc, index) => ({
+      slug: npc.slug,
+      name: npc.name,
+      image: npc.image ?? "",
+      role: npc.role,
+      location: npc.location,
+      relation: npc.relation,
+      status: npc.status,
+      summary: npc.summary,
+      companions: npc.companions ?? [],
+      imagePositionX: npc.imagePositionX ?? 50,
+      imagePositionY: npc.imagePositionY ?? 50,
+      imageScale: npc.imageScale ?? 1,
+      order_index: index + 1,
+    })),
+    archive: content.archive.map((item, index) => ({
+      slug: item.slug,
+      title: item.title,
+      type: item.type,
+      discovered: item.discovered,
+      description: item.description,
+      link: item.link || null,
+      order_index: index + 1,
+    })),
+    masterNotes: content.masterNotes.map((note, index) => ({
+      title: note.title,
+      date: note.date,
+      body: note.body,
+      order_index: index + 1,
+    })),
+  };
+
+  const { error } = await supabase.rpc("save_campaign_content", { content: payload });
+  if (error) throw new Error(error.message);
 
   contentCache = {
     content: cloneContent(content),
@@ -474,6 +424,36 @@ async function verifyPassword(password: string, storedHash: string) {
 
   if (actual.length !== expected.length) return false;
   return timingSafeEqual(actual, expected);
+}
+
+async function getAdminLoginLock(identifier: string) {
+  const supabase = await getSupabase();
+  const { data, error } = await supabase.rpc("get_admin_login_lock", {
+    input_identifier: identifier,
+  });
+  if (error) throw new Error(error.message);
+
+  const [row] = (data ?? []) as Record<string, unknown>[];
+  return {
+    locked: row?.locked === true,
+    retryAfterSeconds: asNumber(row ?? {}, "retry_after_seconds"),
+  };
+}
+
+async function recordAdminLoginFailure(identifier: string) {
+  const supabase = await getSupabase();
+  const { error } = await supabase.rpc("record_admin_login_failure", {
+    input_identifier: identifier,
+  });
+  if (error) throw new Error(error.message);
+}
+
+async function clearAdminLoginAttempts(identifier: string) {
+  const supabase = await getSupabase();
+  const { error } = await supabase.rpc("clear_admin_login_attempts", {
+    input_identifier: identifier,
+  });
+  if (error) throw new Error(error.message);
 }
 
 async function createSession(username: string) {
@@ -615,25 +595,25 @@ export const registerAdminUser = createServerFn({ method: "POST" })
     setResponseHeaders({ "cache-control": "no-store" });
     try {
       const supabase = await getSupabase();
-      const userCount = await readAdminUserCount(supabase);
-
-      if (userCount >= MAX_ADMIN_USERS) {
-        return { ok: false as const, message: "O limite de 2 usuários já foi atingido." };
-      }
-
       const username = data.username.trim();
       const normalized = username.toLowerCase();
       const password_hash = await passwordHash(data.password);
 
-      const { error } = await supabase.from("admin_users").insert({
-        username,
-        username_normalized: normalized,
-        password_hash,
+      const { data: result, error } = await supabase.rpc("register_admin_user", {
+        input_username: username,
+        input_username_normalized: normalized,
+        input_password_hash: password_hash,
+        max_users: MAX_ADMIN_USERS,
       });
-      if (error?.code === "23505") {
-        return { ok: false as const, message: "Esse login já existe." };
-      }
       if (error) throw new Error(error.message);
+
+      const [row] = (result ?? []) as Record<string, unknown>[];
+      if (!row?.ok) {
+        return {
+          ok: false as const,
+          message: asString(row ?? {}, "message", "Não foi possível criar o usuário."),
+        };
+      }
 
       await createSession(username);
       return { ok: true as const, username };
@@ -650,6 +630,12 @@ export const loginAdminUser = createServerFn({ method: "POST" })
     try {
       const supabase = await getSupabase();
       const normalized = data.username.trim().toLowerCase();
+      const loginLock = await getAdminLoginLock(normalized);
+
+      if (loginLock.locked) {
+        return { ok: false as const, message: ADMIN_LOGIN_LOCK_MESSAGE };
+      }
+
       const { data: user, error } = await supabase
         .from("admin_users")
         .select("username, password_hash")
@@ -657,13 +643,20 @@ export const loginAdminUser = createServerFn({ method: "POST" })
         .maybeSingle();
 
       if (error) throw new Error(error.message);
-      if (!user) return { ok: false as const, message: "Login ou senha inválidos." };
+      if (!user) {
+        await recordAdminLoginFailure(normalized);
+        return { ok: false as const, message: "Login ou senha inválidos." };
+      }
 
       const row = user as Record<string, unknown>;
       const matches = await verifyPassword(data.password, asString(row, "password_hash"));
-      if (!matches) return { ok: false as const, message: "Login ou senha inválidos." };
+      if (!matches) {
+        await recordAdminLoginFailure(normalized);
+        return { ok: false as const, message: "Login ou senha inválidos." };
+      }
 
       const username = asString(row, "username");
+      await clearAdminLoginAttempts(normalized);
       await createSession(username);
       return { ok: true as const, username };
     } catch (error) {

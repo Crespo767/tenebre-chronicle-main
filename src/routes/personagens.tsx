@@ -42,6 +42,7 @@ function CharactersPage() {
                   positionX={c.imagePositionX}
                   positionY={c.imagePositionY}
                   scale={c.imageScale}
+                  grayscale={isDeadStatus(c.status)}
                 />
                 <h2 className="mt-4 font-display text-2xl text-foreground">{c.name}</h2>
                 <p className="text-sm text-[var(--gold)]/80">{c.role}</p>
@@ -58,5 +59,12 @@ function CharactersPage() {
         ))}
       </ul>
     </PageContainer>
+  );
+}
+
+function isDeadStatus(status: string) {
+  const normalized = status.toLowerCase();
+  return (
+    normalized.includes("mort") || normalized.includes("falec") || normalized.includes("morreu")
   );
 }

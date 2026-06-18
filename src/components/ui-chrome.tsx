@@ -80,6 +80,7 @@ export function ImageFrame({
   alt,
   ratio = "4/5",
   priority = false,
+  grayscale = false,
   className = "",
   positionX = 50,
   positionY = 50,
@@ -89,6 +90,7 @@ export function ImageFrame({
   alt: string;
   ratio?: string;
   priority?: boolean;
+  grayscale?: boolean;
   className?: string;
   positionX?: number;
   positionY?: number;
@@ -108,7 +110,9 @@ export function ImageFrame({
         alt={alt}
         loading={priority ? "eager" : "lazy"}
         decoding="async"
-        className="absolute inset-0 h-full w-full object-cover opacity-90"
+        className={`absolute inset-0 h-full w-full object-cover opacity-90 ${
+          grayscale ? "grayscale" : ""
+        }`}
         style={{
           objectPosition: `${x}% ${y}%`,
           transform: `scale(${zoom})`,

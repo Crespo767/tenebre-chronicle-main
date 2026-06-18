@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { CompanionsSection } from "../components/companions-section";
-import { PageContainer, ImageFrame, StatusBadge } from "../components/ui-chrome";
+import { PageContainer, ImageFrame } from "../components/ui-chrome";
 import { getCampaignContent } from "../lib/api/campaign.functions";
 
 export const Route = createFileRoute("/personagens/$slug")({
@@ -21,6 +21,13 @@ function Section({ title, children }: { title: string; children: React.ReactNode
       <div className="gold-rule mt-2 w-16" />
       <div className="mt-3 leading-relaxed text-foreground/90">{children}</div>
     </section>
+  );
+}
+
+function isDeadStatus(status: string) {
+  const normalized = status.toLowerCase();
+  return (
+    normalized.includes("mort") || normalized.includes("falec") || normalized.includes("morreu")
   );
 }
 
@@ -56,6 +63,7 @@ function CharacterDetail() {
             positionX={c.imagePositionX}
             positionY={c.imagePositionY}
             scale={c.imageScale}
+            grayscale={isDeadStatus(c.status)}
           />
           <div className="mt-4 space-y-2 text-sm">
             <p className="text-muted-foreground">
@@ -74,11 +82,6 @@ function CharacterDetail() {
                 <span className="text-foreground">Jogador(a):</span> {c.player}
               </p>
             )}
-            <div className="pt-2">
-              <StatusBadge tone={c.status.toLowerCase().includes("viv") ? "ok" : "danger"}>
-                {c.status}
-              </StatusBadge>
-            </div>
           </div>
         </div>
 
