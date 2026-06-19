@@ -38,7 +38,6 @@ function CharactersPage() {
                 <ImageFrame
                   src={c.image}
                   alt={c.name}
-                  ratio="3/4"
                   positionX={c.imagePositionX}
                   positionY={c.imagePositionY}
                   scale={c.imageScale}

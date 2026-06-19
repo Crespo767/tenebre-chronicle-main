@@ -52,7 +52,6 @@ function NpcsPage() {
                   <ImageFrame
                     src={n.image}
                     alt={n.name}
-                    ratio="3/4"
                     className="mb-4"
                     positionX={n.imagePositionX}
                     positionY={n.imagePositionY}

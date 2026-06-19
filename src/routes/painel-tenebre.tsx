@@ -8,6 +8,8 @@ import {
   Image,
   Link as LinkIcon,
   LogOut,
+  Minus,
+  Move,
   Plus,
   RotateCcw,
   Save,
@@ -22,6 +24,8 @@ import {
   type ClipboardEvent,
   type DragEvent,
   type FormEvent,
+  type PointerEvent,
+  type WheelEvent,
 } from "react";
 
 import { PageContainer, SectionTitle, ChronicleCard, StatusBadge } from "../components/ui-chrome";
@@ -347,45 +351,6 @@ function clampNumber(value: unknown, fallback: number, min: number, max: number)
   return Math.min(max, Math.max(min, numberValue));
 }
 
-function RangeField({
-  label,
-  value,
-  min,
-  max,
-  step = 1,
-  suffix = "",
-  onChange,
-}: {
-  label: string;
-  value: number;
-  min: number;
-  max: number;
-  step?: number;
-  suffix?: string;
-  onChange: (value: number) => void;
-}) {
-  return (
-    <label className="block">
-      <span className="flex items-center justify-between gap-3 text-xs uppercase tracking-[0.22em] text-[var(--gold)]/80">
-        <span>{label}</span>
-        <span className="tracking-normal text-muted-foreground">
-          {value.toFixed(step < 1 ? 1 : 0)}
-          {suffix}
-        </span>
-      </span>
-      <input
-        type="range"
-        min={min}
-        max={max}
-        step={step}
-        value={value}
-        onChange={(event) => onChange(Number(event.target.value))}
-        className="mt-2 h-2 w-full accent-[var(--gold)]"
-      />
-    </label>
-  );
-}
-
 function TextAreaField({
   label,
   value,
@@ -567,7 +532,7 @@ function ImagePathField({
   help = "Use uma URL https, um caminho em /images/ ou envie uma imagem.",
   previewAlt = "Prévia da imagem",
   emptyLabel = "Sem imagem",
-  ratio = "3/4",
+  ratio = "9/16",
 }: {
   value: unknown;
   onChange: (value: string) => void;
@@ -590,6 +555,15 @@ function ImagePathField({
   const x = clampNumber(imagePositionX, 50, 0, 100);
   const y = clampNumber(imagePositionY, 50, 0, 100);
   const zoom = clampNumber(imageScale, 1, 1, 3);
+  const frameRef = useRef<HTMLDivElement | null>(null);
+  const dragRef = useRef<{
+    pointerId: number;
+    startClientX: number;
+    startClientY: number;
+    startPositionX: number;
+    startPositionY: number;
+  } | null>(null);
+  const [isReframing, setIsReframing] = useState(false);
   const [previewFailed, setPreviewFailed] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadMessage, setUploadMessage] = useState("");
@@ -741,17 +715,63 @@ function ImagePathField({
     setUploadMessage("Imagem removida.");
   }
 
-  function setFraming(next: Partial<{ imagePositionX: number; imagePositionY: number; imageScale: number }>) {
+  function setFraming(
+    next: Partial<{ imagePositionX: number; imagePositionY: number; imageScale: number }>,
+  ) {
     onFramingChange?.({
-      imagePositionX: next.imagePositionX ?? x,
-      imagePositionY: next.imagePositionY ?? y,
-      imageScale: next.imageScale ?? zoom,
+      imagePositionX: clampNumber(next.imagePositionX ?? x, 50, 0, 100),
+      imagePositionY: clampNumber(next.imagePositionY ?? y, 50, 0, 100),
+      imageScale: clampNumber(next.imageScale ?? zoom, 1, 1, 3),
     });
+  }
+
+  function handleFramePointerDown(event: PointerEvent<HTMLDivElement>) {
+    if (!path || previewFailed || !onFramingChange) return;
+
+    event.preventDefault();
+    dragRef.current = {
+      pointerId: event.pointerId,
+      startClientX: event.clientX,
+      startClientY: event.clientY,
+      startPositionX: x,
+      startPositionY: y,
+    };
+    event.currentTarget.setPointerCapture(event.pointerId);
+    setIsReframing(true);
+  }
+
+  function handleFramePointerMove(event: PointerEvent<HTMLDivElement>) {
+    const drag = dragRef.current;
+    const frame = frameRef.current;
+    if (!drag || !frame || drag.pointerId !== event.pointerId) return;
+
+    const rect = frame.getBoundingClientRect();
+    const deltaX = ((event.clientX - drag.startClientX) / Math.max(1, rect.width)) * 100;
+    const deltaY = ((event.clientY - drag.startClientY) / Math.max(1, rect.height)) * 100;
+    setFraming({
+      imagePositionX: drag.startPositionX - deltaX / zoom,
+      imagePositionY: drag.startPositionY - deltaY / zoom,
+    });
+  }
+
+  function endFrameDrag(event: PointerEvent<HTMLDivElement>) {
+    if (dragRef.current?.pointerId === event.pointerId) {
+      dragRef.current = null;
+      setIsReframing(false);
+    }
+  }
+
+  function handleFrameWheel(event: WheelEvent<HTMLDivElement>) {
+    if (!path || previewFailed || !onFramingChange) return;
+
+    event.preventDefault();
+    const direction = event.deltaY > 0 ? -1 : 1;
+    setFraming({ imageScale: zoom + direction * 0.1 });
   }
 
   return (
     <div
-      className="grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,1fr)_150px]"
+      className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(220px,320px)]"
       onDragOver={(event) => event.preventDefault()}
       onDrop={handleDrop}
       onPaste={handlePaste}
@@ -807,53 +827,64 @@ function ImagePathField({
           </div>
         )}
         {path && onFramingChange && (
-          <div className="mt-5 grid grid-cols-1 gap-4 rounded border border-border/70 bg-background/35 p-4 sm:grid-cols-3">
-            <RangeField
-              label="Horizontal"
-              value={x}
-              min={0}
-              max={100}
-              suffix="%"
-              onChange={(nextValue) => setFraming({ imagePositionX: nextValue })}
-            />
-            <RangeField
-              label="Vertical"
-              value={y}
-              min={0}
-              max={100}
-              suffix="%"
-              onChange={(nextValue) => setFraming({ imagePositionY: nextValue })}
-            />
-            <RangeField
-              label="Zoom"
-              value={zoom}
-              min={1}
-              max={3}
-              step={0.1}
-              suffix="x"
-              onChange={(nextValue) => setFraming({ imageScale: nextValue })}
-            />
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setFraming({ imageScale: zoom - 0.1 })}
+              disabled={zoom <= 1}
+              aria-label="Reduzir zoom"
+              className={`${buttonBase} w-10 border-border/80 bg-background/55 px-0 text-foreground hover:border-[var(--gold)]/50 hover:bg-[var(--gold)]/10`}
+            >
+              <Minus className="h-4 w-4" />
+            </button>
+            <span className="inline-flex h-10 items-center rounded-sm border border-border/70 bg-background/35 px-3 text-xs uppercase tracking-[0.2em] text-muted-foreground">
+              9:16 · {zoom.toFixed(1)}x
+            </span>
+            <button
+              type="button"
+              onClick={() => setFraming({ imageScale: zoom + 0.1 })}
+              disabled={zoom >= 3}
+              aria-label="Aumentar zoom"
+              className={`${buttonBase} w-10 border-border/80 bg-background/55 px-0 text-foreground hover:border-[var(--gold)]/50 hover:bg-[var(--gold)]/10`}
+            >
+              <Plus className="h-4 w-4" />
+            </button>
             <button
               type="button"
               onClick={() =>
                 onFramingChange({ imagePositionX: 50, imagePositionY: 50, imageScale: 1 })
               }
-              className={`${buttonBase} border-border/80 bg-background/55 text-foreground hover:border-[var(--gold)]/50 hover:bg-[var(--gold)]/10 sm:col-span-3`}
+              aria-label="Restaurar enquadramento"
+              className={`${buttonBase} w-10 border-border/80 bg-background/55 px-0 text-foreground hover:border-[var(--gold)]/50 hover:bg-[var(--gold)]/10`}
             >
               <RotateCcw className="h-4 w-4" />
-              Restaurar enquadramento
             </button>
           </div>
         )}
       </div>
-      <div className="overflow-hidden rounded border border-border/70 bg-background/55">
+      <div
+        ref={frameRef}
+        className={`relative overflow-hidden rounded border border-border/70 bg-background/55 ${
+          path && !previewFailed && onFramingChange
+            ? isReframing
+              ? "cursor-grabbing touch-none"
+              : "cursor-grab touch-none"
+            : ""
+        }`}
+        style={{ aspectRatio: ratio }}
+        onPointerDown={handleFramePointerDown}
+        onPointerMove={handleFramePointerMove}
+        onPointerUp={endFrameDrag}
+        onPointerCancel={endFrameDrag}
+        onWheel={handleFrameWheel}
+      >
         {path && !previewFailed ? (
           <img
             src={path}
             alt={previewAlt}
-            className="aspect-[3/4] w-full object-cover"
+            draggable={false}
+            className="absolute inset-0 h-full w-full select-none object-cover"
             style={{
-              aspectRatio: ratio,
               objectPosition: `${x}% ${y}%`,
               transform: `scale(${zoom})`,
               transformOrigin: `${x}% ${y}%`,
@@ -865,11 +896,15 @@ function ImagePathField({
           />
         ) : (
           <div
-            className="flex aspect-[3/4] flex-col items-center justify-center gap-2 px-3 text-center text-xs text-muted-foreground"
-            style={{ aspectRatio: ratio }}
+            className="absolute inset-0 flex flex-col items-center justify-center gap-2 px-3 text-center text-xs text-muted-foreground"
           >
             <Image className="h-5 w-5 text-[var(--gold)]/70" />
             {path ? "Imagem não encontrada" : emptyLabel}
+          </div>
+        )}
+        {path && !previewFailed && onFramingChange && (
+          <div className="pointer-events-none absolute left-2 top-2 inline-flex h-8 w-8 items-center justify-center rounded-sm border border-[var(--gold)]/50 bg-background/75 text-[var(--gold)]">
+            <Move className="h-4 w-4" />
           </div>
         )}
       </div>
@@ -1598,7 +1633,6 @@ function SectionForm({
                 onUpload={uploadImage}
                 previewAlt="Prévia da imagem do arquivo"
                 emptyLabel="Sem arquivo"
-                ratio="16/10"
               />
             ) : (
               <Field

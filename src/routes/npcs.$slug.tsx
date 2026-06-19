@@ -49,7 +49,6 @@ function NpcDetail() {
             <ImageFrame
               src={npc.image}
               alt={npc.name}
-              ratio="3/4"
               priority
               positionX={npc.imagePositionX}
               positionY={npc.imagePositionY}

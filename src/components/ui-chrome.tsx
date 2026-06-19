@@ -78,7 +78,7 @@ export function StatusBadge({
 export function ImageFrame({
   src,
   alt,
-  ratio = "4/5",
+  ratio = "9/16",
   priority = false,
   grayscale = false,
   className = "",

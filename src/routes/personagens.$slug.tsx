@@ -58,7 +58,6 @@ function CharacterDetail() {
           <ImageFrame
             src={c.image}
             alt={c.name}
-            ratio="3/4"
             priority
             positionX={c.imagePositionX}
             positionY={c.imagePositionY}
