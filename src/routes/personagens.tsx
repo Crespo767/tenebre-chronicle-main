@@ -33,7 +33,7 @@ function CharactersPage() {
         title="Personagens"
         subtitle="Quem segue junto quando a estrada cobra seu preço."
       />
-      <ul className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+      <ul className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 xl:gap-4">
         {sortedCharacters.map((c) => (
           <li key={c.slug}>
             <Link to="/personagens/$slug" params={{ slug: c.slug }} className="block">
