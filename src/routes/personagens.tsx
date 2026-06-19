@@ -35,9 +35,9 @@ function CharactersPage() {
       />
       <ul className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 xl:gap-4">
         {sortedCharacters.map((c) => (
-          <li key={c.slug}>
-            <Link to="/personagens/$slug" params={{ slug: c.slug }} className="block">
-              <ChronicleCard as="article" className="h-full [padding:1rem]">
+          <li key={c.slug} className="h-full">
+            <Link to="/personagens/$slug" params={{ slug: c.slug }} className="block h-full">
+              <ChronicleCard as="article" className="flex h-full flex-col [padding:1rem]">
                 <ImageFrame
                   src={c.image}
                   alt={c.name}
@@ -51,10 +51,10 @@ function CharactersPage() {
                 <p className="mt-1 text-xs uppercase tracking-widest text-muted-foreground">
                   {c.people}
                 </p>
-                <p className="mt-2 line-clamp-2 text-sm italic leading-relaxed text-foreground/85">
-                  “{c.quote}”
+                <p className="mt-2 min-h-12 line-clamp-2 text-sm italic leading-relaxed text-foreground/85">
+                  {c.quote.trim() ? `"${c.quote}"` : null}
                 </p>
-                <p className="mt-3 text-xs uppercase tracking-[0.25em] text-[var(--gold)]/80">
+                <p className="mt-auto pt-3 text-xs uppercase tracking-[0.25em] text-[var(--gold)]/80">
                   Ver personagem →
                 </p>
               </ChronicleCard>
