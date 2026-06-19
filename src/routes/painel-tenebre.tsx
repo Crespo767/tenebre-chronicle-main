@@ -56,6 +56,7 @@ const otherArchiveTypeValue = "__other_archive_type__";
 const editorStateStorageKey = "tenebre-admin-editor-state";
 const maxImageUploadBytes = 5 * 1024 * 1024;
 const targetImageUploadBytes = 3 * 1024 * 1024;
+const lifeStatusOptions = ["Vivo", "Morto"];
 
 const sections: {
   key: SectionKey;
@@ -260,43 +261,47 @@ function fromLines(value: string) {
     .filter(Boolean);
 }
 
-function companionLines(value: unknown) {
-  if (!Array.isArray(value)) return "";
-
-  return value
-    .map((item) => {
-      const companion = item as Partial<Companion>;
-      return [
-        companion.name ?? "",
-        companion.type ?? "",
-        companion.status ?? "",
-        companion.description ?? "",
-      ].join(" | ");
-    })
-    .join("\n");
+function normalizeLifeStatus(value: unknown) {
+  const normalized = String(value ?? "").toLowerCase();
+  return normalized.includes("mort") || normalized.includes("falec") || normalized.includes("morreu")
+    ? "Morto"
+    : "Vivo";
 }
 
-function companionsFromLines(value: string): Companion[] {
-  return fromLines(value)
-    .map((line) => {
-      const [name = "", type = "", status = "", ...descriptionParts] = line
-        .split("|")
-        .map((part) => part.trim());
+function normalizeCompanion(value: unknown): Companion {
+  const companion =
+    value && typeof value === "object" ? (value as Partial<Record<string, unknown>>) : {};
 
-      return {
-        name,
-        type,
-        status,
-        description: descriptionParts.join(" | "),
-      };
-    })
-    .filter(
-      (item) =>
-        item.name.length > 0 ||
-        item.type.length > 0 ||
-        item.status.length > 0 ||
-        item.description.length > 0,
-    );
+  return {
+    name: String(companion.name ?? "").trim(),
+    image: String(companion.image ?? "").trim(),
+  };
+}
+
+function normalizeCompanions(value: unknown): Companion[] {
+  if (!Array.isArray(value)) return [];
+  return value.map(normalizeCompanion);
+}
+
+function cleanCompanions(value: unknown): Companion[] {
+  return normalizeCompanions(value).filter(
+    (companion) => companion.name.length > 0 || companion.image.length > 0,
+  );
+}
+
+function normalizeEditableContent(content: CampaignContent): CampaignContent {
+  const next = cloneContent(content);
+  next.characters = next.characters.map((character) => ({
+    ...character,
+    status: normalizeLifeStatus(character.status),
+    companions: cleanCompanions(character.companions),
+  }));
+  next.npcs = next.npcs.map((npc) => ({
+    ...npc,
+    status: normalizeLifeStatus(npc.status),
+    companions: cleanCompanions(npc.companions),
+  }));
+  return next;
 }
 
 function Field({
@@ -398,21 +403,82 @@ function LinesField({
   );
 }
 
-function CompanionLinesField({
+function CompanionImageField({
   value,
   onChange,
+  onUpload,
 }: {
   value: unknown;
   onChange: (value: Companion[]) => void;
+  onUpload: (file: File) => Promise<string>;
 }) {
+  const companions = normalizeCompanions(value);
+
+  function updateCompanion(index: number, nextValue: Partial<Companion>) {
+    const next = [...companions];
+    next[index] = { ...next[index], ...nextValue };
+    onChange(next);
+  }
+
+  function addCompanion() {
+    onChange([...companions, { name: "", image: "" }]);
+  }
+
+  function removeCompanion(index: number) {
+    onChange(companions.filter((_, companionIndex) => companionIndex !== index));
+  }
+
   return (
-    <TextAreaField
-      label="Companheiros"
-      value={companionLines(value)}
-      onChange={(nextValue) => onChange(companionsFromLines(nextValue))}
-      rows={5}
-      help="Uma linha por companheiro: Nome | Tipo | Status | Descrição."
-    />
+    <div className="space-y-4">
+      {companions.length === 0 ? (
+        <div className="rounded border border-border/70 bg-background/35 p-4 text-sm text-muted-foreground">
+          Nenhum companheiro cadastrado.
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {companions.map((companion, index) => (
+            <div key={index} className="rounded border border-border/70 bg-background/25 p-4">
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <h4 className="font-display text-xl text-foreground">
+                  {companion.name || `Companheiro ${index + 1}`}
+                </h4>
+                <button
+                  type="button"
+                  onClick={() => removeCompanion(index)}
+                  className={`${buttonBase} border-[var(--blood)]/60 bg-[var(--blood)]/10 text-[oklch(0.78_0.13_25)] hover:border-[var(--blood)]/80 hover:bg-[var(--blood)]/20`}
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Remover
+                </button>
+              </div>
+              <div className="space-y-4">
+                <Field
+                  label="Nome"
+                  value={companion.name}
+                  onChange={(name) => updateCompanion(index, { name })}
+                />
+                <ImagePathField
+                  label="Imagem"
+                  value={companion.image}
+                  onChange={(image) => updateCompanion(index, { image })}
+                  onUpload={onUpload}
+                  previewAlt={`Prévia de ${companion.name || "companheiro"}`}
+                  emptyLabel="Sem imagem"
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+      <button
+        type="button"
+        onClick={addCompanion}
+        className={`${buttonBase} border-border/80 bg-background/55 text-foreground hover:border-[var(--gold)]/50 hover:bg-[var(--gold)]/10`}
+      >
+        <Plus className="h-4 w-4" />
+        Adicionar companheiro
+      </button>
+    </div>
   );
 }
 
@@ -1438,10 +1504,11 @@ function SectionForm({
               value={draft.people}
               onChange={(value) => setField("people", value)}
             />
-            <Field
+            <SelectField
               label="Status"
-              value={draft.status}
+              value={normalizeLifeStatus(draft.status)}
               onChange={(value) => setField("status", value)}
+              options={lifeStatusOptions}
             />
             <Field
               label="Sombra"
@@ -1503,12 +1570,13 @@ function SectionForm({
         </FormSection>
 
         <FormSection
-          title="Companheiros"
-          description="Servos, animais, familiares, montarias ou outros vínculos ligados ao personagem."
+          title="Companheiros, servos e aliados"
+          description="Nome e imagem de vínculos ligados ao personagem."
         >
-          <CompanionLinesField
+          <CompanionImageField
             value={draft.companions}
             onChange={(value) => setField("companions", value)}
+            onUpload={uploadImage}
           />
         </FormSection>
       </div>
@@ -1537,10 +1605,11 @@ function SectionForm({
               value={draft.relation}
               onChange={(value) => setField("relation", value)}
             />
-            <Field
+            <SelectField
               label="Status"
-              value={draft.status}
+              value={normalizeLifeStatus(draft.status)}
               onChange={(value) => setField("status", value)}
+              options={lifeStatusOptions}
             />
           </div>
         </FormSection>
@@ -1571,12 +1640,13 @@ function SectionForm({
         </FormSection>
 
         <FormSection
-          title="Companheiros"
-          description="Servos, animais, familiares, montarias ou outros vínculos ligados ao NPC."
+          title="Companheiros, servos e aliados"
+          description="Nome e imagem de vínculos ligados ao NPC."
         >
-          <CompanionLinesField
+          <CompanionImageField
             value={draft.companions}
             onChange={(value) => setField("companions", value)}
+            onUpload={uploadImage}
           />
         </FormSection>
       </div>
@@ -1912,9 +1982,10 @@ function Editor({
   }
 
   async function persistContent(nextContent: CampaignContent, message: string) {
+    const normalizedContent = normalizeEditableContent(nextContent);
     setIsSaving(true);
     try {
-      const result = await saveContentFn({ data: nextContent });
+      const result = await saveContentFn({ data: normalizedContent });
       setContent(result.content);
       setContentRevision((current) => {
         const nextRevision = current + 1;

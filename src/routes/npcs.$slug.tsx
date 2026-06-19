@@ -21,6 +21,10 @@ function tone(status: string) {
   return "ok" as const;
 }
 
+function isDeadStatus(status: string) {
+  return tone(status) === "danger";
+}
+
 function NpcDetail() {
   const { slug } = Route.useParams();
   const { npcs } = Route.useLoaderData();
@@ -53,6 +57,7 @@ function NpcDetail() {
               positionX={npc.imagePositionX}
               positionY={npc.imagePositionY}
               scale={npc.imageScale}
+              grayscale={isDeadStatus(npc.status)}
             />
           </div>
         )}

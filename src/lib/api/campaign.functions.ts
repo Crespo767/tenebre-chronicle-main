@@ -33,9 +33,7 @@ let contentCache: { content: CampaignContent; expiresAt: number } | null = null;
 const stringArraySchema = z.array(z.string());
 const companionSchema = z.object({
   name: z.string(),
-  type: z.string(),
-  status: z.string(),
-  description: z.string(),
+  image: z.string(),
 });
 const imagePositionSchema = z.number().min(0).max(100).optional();
 const imageScaleSchema = z.number().min(1).max(3).optional();
@@ -200,14 +198,9 @@ function asCompanions(row: Record<string, unknown>, key: string) {
     .filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === "object")
     .map((item) => ({
       name: asString(item, "name"),
-      type: asString(item, "type"),
-      status: asString(item, "status"),
-      description: asString(item, "description"),
+      image: asString(item, "image"),
     }))
-    .filter(
-      (item) =>
-        item.name.trim() || item.type.trim() || item.status.trim() || item.description.trim(),
-    );
+    .filter((item) => item.name.trim() || item.image.trim());
 }
 
 function mapSession(row: Record<string, unknown>) {

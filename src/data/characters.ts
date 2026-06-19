@@ -1,8 +1,6 @@
 export type Companion = {
   name: string;
-  type: string;
-  status: string;
-  description: string;
+  image: string;
 };
 
 export type ImageFraming = {

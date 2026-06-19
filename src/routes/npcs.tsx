@@ -28,6 +28,10 @@ function tone(status: string) {
   return "ok" as const;
 }
 
+function isDeadStatus(status: string) {
+  return tone(status) === "danger";
+}
+
 function NpcsPage() {
   const { npcs } = Route.useLoaderData();
   const isListRoute = useRouterState({
@@ -56,6 +60,7 @@ function NpcsPage() {
                     positionX={n.imagePositionX}
                     positionY={n.imagePositionY}
                     scale={n.imageScale}
+                    grayscale={isDeadStatus(n.status)}
                   />
                 )}
                 <div className="flex items-start justify-between gap-3">
