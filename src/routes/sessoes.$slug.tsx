@@ -70,12 +70,6 @@ function SessionDetail() {
         <Block title="Locais visitados" items={session.locations} />
         <Block title="Consequências" items={session.consequences} />
         <Block title="Ganchos pendentes" items={session.hooks} />
-
-        <section className="mt-10 chronicle-card p-5">
-          <h2 className="font-display text-xl text-[var(--gold)]">Notas do Mestre (públicas)</h2>
-          <div className="gold-rule mt-2 w-16" />
-          <p className="mt-3 italic leading-relaxed text-foreground/85">{session.masterNotes}</p>
-        </section>
       </article>
     </PageContainer>
   );
