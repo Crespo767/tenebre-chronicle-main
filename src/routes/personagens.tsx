@@ -17,6 +17,9 @@ export const Route = createFileRoute("/personagens")({
 
 function CharactersPage() {
   const { characters } = Route.useLoaderData();
+  const sortedCharacters = [...characters].sort((a, b) =>
+    a.name.localeCompare(b.name, "pt-BR", { sensitivity: "base" }),
+  );
   const isListRoute = useRouterState({
     select: (state) => state.location.pathname === "/personagens",
   });
@@ -24,17 +27,17 @@ function CharactersPage() {
   if (!isListRoute) return <Outlet />;
 
   return (
-    <PageContainer>
+    <PageContainer className="max-w-7xl">
       <SectionTitle
         eyebrow="Grupo"
         title="Personagens"
         subtitle="Quem segue junto quando a estrada cobra seu preço."
       />
-      <ul className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {characters.map((c) => (
+      <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {sortedCharacters.map((c) => (
           <li key={c.slug}>
             <Link to="/personagens/$slug" params={{ slug: c.slug }} className="block">
-              <ChronicleCard as="article" className="h-full">
+              <ChronicleCard as="article" className="h-full [padding:1rem]">
                 <ImageFrame
                   src={c.image}
                   alt={c.name}
@@ -43,13 +46,15 @@ function CharactersPage() {
                   scale={c.imageScale}
                   grayscale={isDeadStatus(c.status)}
                 />
-                <h2 className="mt-4 font-display text-2xl text-foreground">{c.name}</h2>
+                <h2 className="mt-3 font-display text-xl text-foreground">{c.name}</h2>
                 <p className="text-sm text-[var(--gold)]/80">{c.role}</p>
                 <p className="mt-1 text-xs uppercase tracking-widest text-muted-foreground">
                   {c.people}
                 </p>
-                <p className="mt-3 italic text-foreground/85">“{c.quote}”</p>
-                <p className="mt-4 text-xs uppercase tracking-[0.25em] text-[var(--gold)]/80">
+                <p className="mt-2 line-clamp-2 text-sm italic leading-relaxed text-foreground/85">
+                  “{c.quote}”
+                </p>
+                <p className="mt-3 text-xs uppercase tracking-[0.25em] text-[var(--gold)]/80">
                   Ver personagem →
                 </p>
               </ChronicleCard>
