@@ -2,7 +2,7 @@ import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-r
 import { PageContainer, SectionTitle, ChronicleCard } from "../components/ui-chrome";
 import { getCampaignContent } from "../lib/api/campaign.functions";
 
-const sessionCoverImage = "/images/sessions/acampamento.png";
+const sessionCoverImage = "/images/sessions/acampamento.webp";
 
 export const Route = createFileRoute("/sessoes")({
   loader: () => getCampaignContent(),
@@ -43,6 +43,9 @@ function SessionsPage() {
                   className="aspect-[16/9] w-full rounded border border-[var(--gold)]/30 object-cover"
                   loading="lazy"
                   decoding="async"
+                  width={1200}
+                  height={675}
+                  sizes="(max-width: 768px) calc(100vw - 3rem), 560px"
                 />
                 <h2 className="mt-4 font-display text-2xl text-[var(--gold)]">
                   Sessão {String(s.number).padStart(2, "0")}

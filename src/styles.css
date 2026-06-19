@@ -78,6 +78,7 @@
   }
   html {
     color-scheme: dark;
+    text-size-adjust: 100%;
   }
   body {
     background-color: var(--color-background);
@@ -88,6 +89,7 @@
       radial-gradient(ellipse at bottom, oklch(0.18 0.04 55 / 0.35), transparent 70%);
     background-attachment: fixed;
     min-height: 100vh;
+    overflow-wrap: anywhere;
   }
   h1,
   h2,
@@ -108,6 +110,23 @@
   ::selection {
     background: var(--gold);
     color: var(--background);
+  }
+}
+
+@media (max-width: 767px), (prefers-reduced-motion: reduce) {
+  body {
+    background-attachment: scroll;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
   }
 }
 

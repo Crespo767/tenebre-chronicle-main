@@ -54,8 +54,9 @@ const buttonBase =
 const defaultArchiveTypes = ["Carta", "Mapa", "Imagem", "Documento", "Handout"];
 const otherArchiveTypeValue = "__other_archive_type__";
 const editorStateStorageKey = "tenebre-admin-editor-state";
-const maxImageUploadBytes = 5 * 1024 * 1024;
-const targetImageUploadBytes = 3 * 1024 * 1024;
+const maxImageUploadBytes = 15 * 1024 * 1024;
+const targetImageUploadBytes = 600 * 1024;
+const maxImageDimension = 1600;
 const lifeStatusOptions = ["Vivo", "Morto"];
 
 const sections: {
@@ -263,7 +264,9 @@ function fromLines(value: string) {
 
 function normalizeLifeStatus(value: unknown) {
   const normalized = String(value ?? "").toLowerCase();
-  return normalized.includes("mort") || normalized.includes("falec") || normalized.includes("morreu")
+  return normalized.includes("mort") ||
+    normalized.includes("falec") ||
+    normalized.includes("morreu")
     ? "Morto"
     : "Vivo";
 }
@@ -961,9 +964,7 @@ function ImagePathField({
             }}
           />
         ) : (
-          <div
-            className="absolute inset-0 flex flex-col items-center justify-center gap-2 px-3 text-center text-xs text-muted-foreground"
-          >
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 px-3 text-center text-xs text-muted-foreground">
             <Image className="h-5 w-5 text-[var(--gold)]/70" />
             {path ? "Imagem não encontrada" : emptyLabel}
           </div>
@@ -1009,7 +1010,7 @@ function canvasToBlob(canvas: HTMLCanvasElement, type: string, quality: number) 
 }
 
 async function prepareImageForUpload(file: File) {
-  if (file.size <= targetImageUploadBytes || file.type === "image/gif") return file;
+  if (file.type === "image/gif") return file;
 
   if (typeof document === "undefined" || typeof createImageBitmap === "undefined") return file;
 
@@ -1021,13 +1022,20 @@ async function prepareImageForUpload(file: File) {
   }
 
   try {
+    if (
+      file.size <= targetImageUploadBytes &&
+      Math.max(bitmap.width, bitmap.height) <= maxImageDimension
+    ) {
+      return file;
+    }
+
     const canvas = document.createElement("canvas");
     const context = canvas.getContext("2d");
     if (!context) return file;
 
     let bestFile: File | null = null;
-    const maxDimensions = [1800, 1500, 1200, 1000];
-    const qualities = [0.86, 0.78, 0.7, 0.62];
+    const maxDimensions = [1600, 1280, 1024, 800];
+    const qualities = [0.82, 0.74, 0.66, 0.58];
 
     for (const maxDimension of maxDimensions) {
       const scale = Math.min(1, maxDimension / Math.max(bitmap.width, bitmap.height));

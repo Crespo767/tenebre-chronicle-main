@@ -19,7 +19,10 @@ const MAX_ADMIN_USERS = 2;
 const SESSION_COOKIE = "tenebre_admin_session";
 const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 7;
 const SCRYPT_KEY_LENGTH = 64;
-const CONTENT_CACHE_TTL_MS = 10_000;
+const CONTENT_CACHE_TTL_MS = 60_000;
+const PUBLIC_CACHE_CONTROL = "public, max-age=0, s-maxage=60, stale-while-revalidate=300";
+const MAX_IMAGE_UPLOAD_BYTES = 5 * 1024 * 1024;
+const MAX_IMAGE_UPLOAD_BASE64_LENGTH = Math.ceil((MAX_IMAGE_UPLOAD_BYTES * 4) / 3) + 4;
 const ADMIN_LOGIN_LOCK_MESSAGE =
   "Muitas tentativas de login. Aguarde alguns minutos e tente novamente.";
 const SCRYPT_OPTIONS = {
@@ -118,7 +121,7 @@ const credentialsSchema = z.object({
 const imageUploadSchema = z.object({
   fileName: z.string().min(1).max(180),
   mimeType: z.enum(["image/png", "image/jpeg", "image/webp", "image/gif"]),
-  base64: z.string().min(1),
+  base64: z.string().min(1).max(MAX_IMAGE_UPLOAD_BASE64_LENGTH),
 });
 
 type AdminStatus = {
@@ -178,7 +181,13 @@ function asNumber(row: Record<string, unknown>, key: string, fallback = 0) {
   return typeof value === "number" ? value : fallback;
 }
 
-function asBoundedNumber(row: Record<string, unknown>, key: string, fallback: number, min: number, max: number) {
+function asBoundedNumber(
+  row: Record<string, unknown>,
+  key: string,
+  fallback: number,
+  min: number,
+  max: number,
+) {
   const value = row[key];
   const numberValue = typeof value === "number" ? value : Number(value);
   if (!Number.isFinite(numberValue)) return fallback;
@@ -538,7 +547,7 @@ function getAdminErrorMessage(error: unknown) {
 }
 
 export const getCampaignContent = createServerFn({ method: "GET" }).handler(async () => {
-  setResponseHeaders({ "cache-control": "no-store" });
+  setResponseHeaders({ "cache-control": PUBLIC_CACHE_CONTROL });
 
   try {
     return await readCampaignContent();
@@ -690,7 +699,7 @@ export const uploadCharacterImage = createServerFn({ method: "POST" })
     await requireAdmin();
 
     const bytes = Buffer.from(data.base64, "base64");
-    if (bytes.byteLength > 5 * 1024 * 1024) {
+    if (bytes.byteLength > MAX_IMAGE_UPLOAD_BYTES) {
       return { ok: false as const, message: "A imagem precisa ter no máximo 5 MB." };
     }
 

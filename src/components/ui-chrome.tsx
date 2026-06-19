@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 
 function clamp(value: number | undefined, fallback: number, min: number, max: number) {
   if (typeof value !== "number" || !Number.isFinite(value)) return fallback;
@@ -99,6 +99,9 @@ export function ImageFrame({
   const x = clamp(positionX, 50, 0, 100);
   const y = clamp(positionY, 50, 0, 100);
   const zoom = clamp(scale, 1, 1, 3);
+  const optimizedSrc = useMemo(() => getOptimizedImageUrl(src, 900), [src]);
+  const [failedOptimizedSrc, setFailedOptimizedSrc] = useState("");
+  const displaySrc = failedOptimizedSrc === optimizedSrc ? src : optimizedSrc;
 
   return (
     <div
@@ -106,10 +109,12 @@ export function ImageFrame({
       style={{ aspectRatio: ratio }}
     >
       <img
-        src={src}
+        src={displaySrc}
         alt={alt}
         loading={priority ? "eager" : "lazy"}
+        fetchPriority={priority ? "high" : "auto"}
         decoding="async"
+        sizes="(max-width: 640px) calc(100vw - 3rem), (max-width: 1024px) 45vw, 360px"
         className={`absolute inset-0 h-full w-full object-cover opacity-90 ${
           grayscale ? "grayscale" : ""
         }`}
@@ -119,7 +124,11 @@ export function ImageFrame({
           transformOrigin: `${x}% ${y}%`,
         }}
         onError={(e) => {
-          (e.currentTarget as HTMLImageElement).style.display = "none";
+          if (displaySrc !== src) {
+            setFailedOptimizedSrc(displaySrc);
+            return;
+          }
+          e.currentTarget.style.display = "none";
         }}
       />
       <div
@@ -128,4 +137,22 @@ export function ImageFrame({
       />
     </div>
   );
+}
+
+function getOptimizedImageUrl(src: string, width: number) {
+  if (!src.includes("/storage/v1/object/public/")) return src;
+
+  try {
+    const url = new URL(src);
+    url.pathname = url.pathname.replace(
+      "/storage/v1/object/public/",
+      "/storage/v1/render/image/public/",
+    );
+    url.searchParams.set("width", String(width));
+    url.searchParams.set("quality", "75");
+    url.searchParams.set("resize", "cover");
+    return url.toString();
+  } catch {
+    return src;
+  }
 }
